@@ -89,11 +89,15 @@ export default function ActiveRideScreen() {
 
     // Sauvegarde du point (toutes les 5 secondes environ via le hook useLocation)
     if (activeRide.id) {
-      saveRidePoint(activeRide.id, {
+      void saveRidePoint(activeRide.id, {
         latitude: location.latitude,
         longitude: location.longitude,
         altitude_m: null,
         speed_kmh: null,
+      }).then((result) => {
+        if (!result.success) {
+          console.warn('[BikeTrip] Position non sauvegardée', result.error);
+        }
       });
     }
     addRidePoint(location);

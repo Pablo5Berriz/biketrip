@@ -36,7 +36,7 @@ export default function CollectionDetailScreen() {
   });
 
   const collection = collectionQuery.data?.data;
-  const trails = (collection?.collection_trails ?? []).map((ct: any) => ct.trail);
+  const trails = (collection?.collection_trails ?? []).map((ct) => ct.trail);
 
   function handleDelete() {
     Alert.alert(

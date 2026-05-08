@@ -13,7 +13,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { LoadingState } from '@/components/ui/LoadingState';
 import { formatDistance, formatDuration } from '@/lib/geo/geoUtils';
 import { colors } from '@/config/colors';
-import { supabase } from '@/lib/supabase/client';
+import { getRideById, updateRideNotes } from '@/features/rides/rideService';
+import { useUser } from '@/stores/authStore';
 
 // ============================================================
 // Écran Résumé de sortie
@@ -24,32 +25,24 @@ export default function RideSummaryScreen() {
   const [notes, setNotes] = useState('');
   const [saved, setSaved] = useState(false);
   const qc = useQueryClient();
+  const user = useUser();
 
   const rideQuery = useQuery({
-    queryKey: ['ride', rideId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('rides')
-        .select('*, trail:trails(name, difficulty, distance_km)')
-        .eq('id', rideId)
-        .single();
-      if (error) return { data: null, error: error.message };
-      return { data, error: null };
-    },
-    enabled: !!rideId,
+    queryKey: ['ride', rideId, user?.id],
+    queryFn: () => getRideById(rideId!, user!.id),
+    enabled: !!rideId && !!user?.id,
     staleTime: 1000 * 60 * 5,
   });
 
   const saveNotesMutation = useMutation({
     mutationFn: async () => {
-      const { error } = await supabase
-        .from('rides')
-        .update({ notes })
-        .eq('id', rideId);
-      if (error) throw error;
+      const result = await updateRideNotes(rideId!, user!.id, { notes });
+      if (!result.success) throw new Error(result.error ?? 'Sauvegarde impossible');
+      return result;
     },
     onSuccess: () => {
       setSaved(true);
+      qc.invalidateQueries({ queryKey: ['ride', rideId, user?.id] });
       qc.invalidateQueries({ queryKey: ['rides', 'history'] });
       qc.invalidateQueries({ queryKey: ['rides', 'stats'] });
     },
@@ -84,7 +77,7 @@ export default function RideSummaryScreen() {
   const distance = ride.distance_km ?? 0;
   const duration = ride.duration_seconds ?? 0;
   const elevation = ride.elevation_gain_m ?? 0;
-  const avgSpeed = ride.avg_speed_kmh ?? 0;
+  const avgSpeed = ride.average_speed_kmh ?? 0;
   const maxSpeed = ride.max_speed_kmh ?? 0;
 
   return (
@@ -108,9 +101,6 @@ export default function RideSummaryScreen() {
             <Text className="text-white text-2xl font-black text-center">
               Sortie terminée ! 🎉
             </Text>
-            {ride.trail?.name && (
-              <Text className="text-white/80 text-sm text-center">{ride.trail.name}</Text>
-            )}
           </LinearGradient>
 
           <View className="px-4 mt-4 gap-4">

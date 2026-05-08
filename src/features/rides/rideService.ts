@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase/client';
 import type { Ride, RidePoint, ServiceResult } from '@/types/database';
+import { rideNotesSchema, type RideNotesFormData } from '@/lib/validations/ride';
 
 // ============================================================
 // Service de suivi des sorties vélo
@@ -122,6 +123,68 @@ export async function cancelRide(rideId: string, userId: string): Promise<Servic
 
     if (error) return { success: false, error: 'Annulation impossible.' };
     return { success: true };
+  } catch {
+    return { success: false, error: 'Erreur réseau.' };
+  }
+}
+
+/**
+ * Charger une sortie appartenant à l'utilisateur courant.
+ */
+export async function getRideById(
+  rideId: string,
+  userId: string,
+): Promise<ServiceResult<Ride>> {
+  if (!userId) return { success: false, error: 'Non authentifié' };
+
+  try {
+    const { data, error } = await supabase
+      .from('rides')
+      .select('*')
+      .eq('id', rideId)
+      .eq('user_id', userId)
+      .single();
+
+    if (error) return { success: false, error: 'Sortie introuvable.' };
+    return { success: true, data };
+  } catch {
+    return { success: false, error: 'Erreur réseau.' };
+  }
+}
+
+/**
+ * Mettre à jour les notes/titre d'une sortie appartenant à l'utilisateur.
+ */
+export async function updateRideNotes(
+  rideId: string,
+  userId: string,
+  input: RideNotesFormData,
+): Promise<ServiceResult<Ride>> {
+  if (!userId) return { success: false, error: 'Non authentifié' };
+
+  const parsed = rideNotesSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      success: false,
+      error: 'Notes invalides.',
+      fieldErrors: parsed.error.flatten().fieldErrors,
+    };
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from('rides')
+      .update({
+        ...parsed.data,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', rideId)
+      .eq('user_id', userId)
+      .select()
+      .single();
+
+    if (error) return { success: false, error: 'Impossible de sauvegarder les notes.' };
+    return { success: true, data };
   } catch {
     return { success: false, error: 'Erreur réseau.' };
   }

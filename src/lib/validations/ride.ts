@@ -37,6 +37,7 @@ export const collectionSchema = z.object({
     .string()
     .max(300, 'Description trop longue (max 300 caractères)')
     .trim()
+    .nullable()
     .optional(),
 });
 

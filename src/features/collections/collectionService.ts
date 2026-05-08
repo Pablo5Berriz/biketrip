@@ -1,18 +1,43 @@
 import { supabase } from '@/lib/supabase/client';
-import type { ServiceResult } from '@/types/database';
+import { collectionSchema, type CollectionFormData } from '@/lib/validations/ride';
+import type {
+  Collection,
+  CollectionTrail,
+  CollectionWithTrails,
+  ServiceResult,
+  Trail,
+} from '@/types/database';
 
 // ============================================================
 // Service Collections
 // ============================================================
 
-export interface CreateCollectionInput {
-  name: string;
-  description?: string | null;
+export type CreateCollectionInput = CollectionFormData;
+export type UpdateCollectionInput = Partial<CollectionFormData>;
+
+export interface CollectionSummary extends Collection {
+  trail_count: number;
 }
 
-export async function getCollections(): Promise<ServiceResult<any[]>> {
+type CollectionTrailWithTrail = CollectionTrail & {
+  trail: Trail;
+};
+
+export interface CollectionDetail extends Collection {
+  collection_trails: CollectionTrailWithTrail[];
+}
+
+type CollectionRow = Collection & {
+  collection_trails?: { count: number }[];
+};
+
+type CollectionDetailRow = Collection & {
+  collection_trails?: CollectionTrailWithTrail[];
+};
+
+export async function getCollections(): Promise<ServiceResult<CollectionSummary[]>> {
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return { data: null, error: 'Non authentifié' };
+  if (!user) return { success: false, data: null, error: 'Non authentifié' };
 
   const { data, error } = await supabase
     .from('collections')
@@ -23,69 +48,102 @@ export async function getCollections(): Promise<ServiceResult<any[]>> {
     .eq('user_id', user.id)
     .order('created_at', { ascending: false });
 
-  if (error) return { data: null, error: error.message };
+  if (error) return { success: false, data: null, error: error.message };
 
-  const enriched = (data ?? []).map((c) => ({
-    ...c,
-    trail_count: c.collection_trails?.[0]?.count ?? 0,
+  const enriched = ((data ?? []) as CollectionRow[]).map((collection) => ({
+    ...collection,
+    trail_count: collection.collection_trails?.[0]?.count ?? 0,
   }));
 
-  return { data: enriched, error: null };
+  return { success: true, data: enriched, error: null };
 }
 
-export async function getCollectionById(collectionId: string): Promise<ServiceResult<any>> {
+export async function getCollectionById(
+  collectionId: string,
+): Promise<ServiceResult<CollectionDetail>> {
   const { data, error } = await supabase
     .from('collections')
     .select(`
       *,
       collection_trails(
+        id,
+        collection_id,
+        trail_id,
+        created_at,
         trail:trails(
-          id, name, difficulty, distance_km, elevation_gain_m,
-          estimated_duration_min, cover_image_url, average_rating,
-          trail_type, surface_type, is_verified
+          *
         )
       )
     `)
     .eq('id', collectionId)
     .single();
 
-  if (error) return { data: null, error: error.message };
-  return { data, error: null };
+  if (error) return { success: false, data: null, error: error.message };
+
+  const collection = data as CollectionDetailRow;
+  return {
+    success: true,
+    data: {
+      ...collection,
+      collection_trails: collection.collection_trails ?? [],
+    },
+    error: null,
+  };
 }
 
 export async function createCollection(
   input: CreateCollectionInput,
-): Promise<ServiceResult<any>> {
+): Promise<ServiceResult<Collection>> {
+  const parsed = collectionSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      success: false,
+      data: null,
+      error: 'Collection invalide.',
+      fieldErrors: parsed.error.flatten().fieldErrors,
+    };
+  }
+
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return { data: null, error: 'Non authentifié' };
+  if (!user) return { success: false, data: null, error: 'Non authentifié' };
 
   const { data, error } = await supabase
     .from('collections')
     .insert({
       user_id: user.id,
-      name: input.name,
-      description: input.description ?? null,
+      name: parsed.data.name,
+      description: parsed.data.description ?? null,
     })
     .select()
     .single();
 
-  if (error) return { data: null, error: error.message };
-  return { data, error: null };
+  if (error) return { success: false, data: null, error: error.message };
+  return { success: true, data, error: null };
 }
 
 export async function updateCollection(
   collectionId: string,
-  updates: Partial<CreateCollectionInput>,
-): Promise<ServiceResult<any>> {
+  updates: UpdateCollectionInput,
+): Promise<ServiceResult<Collection>> {
+  const parsed = collectionSchema.partial().safeParse(updates);
+  if (!parsed.success) {
+    return {
+      success: false,
+      data: null,
+      error: 'Collection invalide.',
+      fieldErrors: parsed.error.flatten().fieldErrors,
+    };
+  }
+
   const { data, error } = await supabase
     .from('collections')
-    .update({ ...updates, updated_at: new Date().toISOString() })
+    .update({ ...parsed.data, updated_at: new Date().toISOString() })
     .eq('id', collectionId)
     .select()
     .single();
 
-  if (error) return { data: null, error: error.message };
-  return { data, error: null };
+  if (error) return { success: false, data: null, error: error.message };
+  return { success: true, data, error: null };
 }
 
 export async function deleteCollection(collectionId: string): Promise<ServiceResult<null>> {
@@ -94,20 +152,22 @@ export async function deleteCollection(collectionId: string): Promise<ServiceRes
     .delete()
     .eq('id', collectionId);
 
-  if (error) return { data: null, error: error.message };
-  return { data: null, error: null };
+  if (error) return { success: false, data: null, error: error.message };
+  return { success: true, data: null, error: null };
 }
 
 export async function addTrailToCollection(
   collectionId: string,
   trailId: string,
-): Promise<ServiceResult<null>> {
-  const { error } = await supabase
+): Promise<ServiceResult<CollectionTrail>> {
+  const { data, error } = await supabase
     .from('collection_trails')
-    .insert({ collection_id: collectionId, trail_id: trailId });
+    .insert({ collection_id: collectionId, trail_id: trailId })
+    .select()
+    .single();
 
-  if (error) return { data: null, error: error.message };
-  return { data: null, error: null };
+  if (error) return { success: false, data: null, error: error.message };
+  return { success: true, data, error: null };
 }
 
 export async function removeTrailFromCollection(
@@ -120,6 +180,8 @@ export async function removeTrailFromCollection(
     .eq('collection_id', collectionId)
     .eq('trail_id', trailId);
 
-  if (error) return { data: null, error: error.message };
-  return { data: null, error: null };
+  if (error) return { success: false, data: null, error: error.message };
+  return { success: true, data: null, error: null };
 }
+
+export type { Collection, CollectionTrail, CollectionWithTrails };

@@ -3,7 +3,7 @@ import type {
   Trail, TrailPoint, Report, TrailReview, PointOfInterest,
   ServiceResult, PaginatedResult,
 } from '@/types/database';
-import type { TrailFilterFormData } from '@/lib/validations/trail';
+import { trailReviewSchema, type TrailFilterFormData } from '@/lib/validations/trail';
 
 // ============================================================
 // Service des pistes cyclables
@@ -190,14 +190,23 @@ export async function addTrailReview(
   rating: number,
   comment?: string,
 ): Promise<ServiceResult<TrailReview>> {
+  const parsed = trailReviewSchema.safeParse({ rating, comment });
+  if (!parsed.success) {
+    return {
+      success: false,
+      error: 'Avis invalide.',
+      fieldErrors: parsed.error.flatten().fieldErrors,
+    };
+  }
+
   try {
     const { data, error } = await supabase
       .from('trail_reviews')
       .upsert({
         trail_id: trailId,
         user_id: userId,
-        rating,
-        comment: comment ?? null,
+        rating: parsed.data.rating,
+        comment: parsed.data.comment ?? null,
         updated_at: new Date().toISOString(),
       }, { onConflict: 'trail_id,user_id' })
       .select()

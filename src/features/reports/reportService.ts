@@ -1,7 +1,7 @@
 import { supabase } from '@/lib/supabase/client';
 import { uploadImage } from '@/lib/storage/imageUpload';
 import type { Report, ReportVote, ServiceResult } from '@/types/database';
-import type { CreateReportFormData } from '@/lib/validations/report';
+import { createReportSchema, type CreateReportFormData } from '@/lib/validations/report';
 
 // ============================================================
 // Service des signalements communautaires
@@ -14,12 +14,21 @@ export async function createReport(
   data: CreateReportFormData,
   userId: string,
 ): Promise<ServiceResult<Report>> {
+  const parsed = createReportSchema.safeParse(data);
+  if (!parsed.success) {
+    return {
+      success: false,
+      error: 'Signalement invalide.',
+      fieldErrors: parsed.error.flatten().fieldErrors,
+    };
+  }
+
   try {
     let imageUrl: string | null = null;
 
     // Upload image si fournie
-    if (data.image_uri) {
-      const uploadResult = await uploadImage(data.image_uri, 'report-images', userId);
+    if (parsed.data.image_uri) {
+      const uploadResult = await uploadImage(parsed.data.image_uri, 'report-images', userId);
       if (!uploadResult.success) {
         return { success: false, error: 'Impossible d\'uploader l\'image.' };
       }
@@ -27,19 +36,19 @@ export async function createReport(
     }
 
     // Durée d'expiration selon gravité
-    const expiresAt = computeExpiresAt(data.severity ?? 'MEDIUM');
+    const expiresAt = computeExpiresAt(parsed.data.severity ?? 'MEDIUM');
 
     const { data: report, error } = await supabase
       .from('reports')
       .insert({
         user_id: userId,
-        trail_id: data.trail_id ?? null,
-        type: data.type,
-        title: data.title.trim(),
-        description: data.description?.trim() ?? null,
-        severity: data.severity ?? 'MEDIUM',
-        latitude: data.latitude,
-        longitude: data.longitude,
+        trail_id: parsed.data.trail_id ?? null,
+        type: parsed.data.type,
+        title: parsed.data.title,
+        description: parsed.data.description ?? null,
+        severity: parsed.data.severity ?? 'MEDIUM',
+        latitude: parsed.data.latitude,
+        longitude: parsed.data.longitude,
         image_url: imageUrl,
         expires_at: expiresAt,
       })
