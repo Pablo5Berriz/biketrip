@@ -35,8 +35,22 @@ DECLARE
 BEGIN
 
 -- ============================================================
+-- UTILISATEURS AUTH DE DEMO
+-- ============================================================
+INSERT INTO auth.users (id, email, encrypted_password, email_confirmed_at, created_at, updated_at)
+VALUES
+  (admin_id, 'admin@biketrip.test', 'demo', now(), now(), now()),
+  (mod_id, 'moderator@biketrip.test', 'demo', now(), now(), now()),
+  (user1_id, 'user1@biketrip.test', 'demo', now(), now(), now()),
+  (user2_id, 'user2@biketrip.test', 'demo', now(), now(), now()),
+  (user3_id, 'user3@biketrip.test', 'demo', now(), now(), now())
+ON CONFLICT (id) DO NOTHING;
+
+-- ============================================================
 -- PROFILS
 -- ============================================================
+ALTER TABLE profiles DISABLE TRIGGER prevent_profile_role_escalation;
+
 INSERT INTO profiles (id, full_name, avatar_url, city, cycling_level, primary_bike_type, comfortable_distance_km, role)
 VALUES
   (admin_id,  'Marie Tremblay',   NULL, 'Québec',    'EXPERT',  'ROAD',   120, 'ADMIN'),
@@ -44,7 +58,16 @@ VALUES
   (user1_id,  'Sophie Lapointe',  NULL, 'Québec',    'REGULAR', 'HYBRID', 40,  'USER'),
   (user2_id,  'Marc Beaulieu',    NULL, 'Sherbrooke','BEGINNER','URBAN',  20,  'USER'),
   (user3_id,  'Émilie Fortin',    NULL, 'Montréal',  'CASUAL',  'ELECTRIC',35, 'USER')
-ON CONFLICT (id) DO NOTHING;
+ON CONFLICT (id) DO UPDATE
+SET full_name = EXCLUDED.full_name,
+    avatar_url = EXCLUDED.avatar_url,
+    city = EXCLUDED.city,
+    cycling_level = EXCLUDED.cycling_level,
+    primary_bike_type = EXCLUDED.primary_bike_type,
+    comfortable_distance_km = EXCLUDED.comfortable_distance_km,
+    role = EXCLUDED.role;
+
+ALTER TABLE profiles ENABLE TRIGGER prevent_profile_role_escalation;
 
 -- ============================================================
 -- PISTES CYCLABLES
@@ -310,35 +333,35 @@ INSERT INTO rides (id, user_id, trail_id, title, started_at, ended_at,
   distance_km, duration_seconds, average_speed_kmh, max_speed_kmh,
   elevation_gain_m, elevation_loss_m, weather_summary, notes, status)
 VALUES
-  ('r0000000-0000-0000-0000-000000000001',
+  ('d0000000-0000-0000-0000-000000000001',
    user1_id, trail1_id, 'Sortie matinale Plaines',
    '2025-09-15 07:30:00', '2025-09-15 08:45:00',
    12.8, 4500, 18.2, 32.5, 88, 80,
    'Ensoleillé, 14°C, vent léger NE 12 km/h',
    'Super sortie, la piste était très calme le matin. Belle lumière.', 'COMPLETED'),
 
-  ('r0000000-0000-0000-0000-000000000002',
+  ('d0000000-0000-0000-0000-000000000002',
    user1_id, trail2_id, 'Littoral complet A/R',
    '2025-08-22 09:00:00', '2025-08-22 12:30:00',
    57.1, 12600, 16.3, 45.8, 485, 480,
    'Partiellement nuageux, 19°C',
    'Belle journée malgré le vent sur la partie Lévis. Les travaux km 18 sont bien délimités.', 'COMPLETED'),
 
-  ('r0000000-0000-0000-0000-000000000003',
+  ('d0000000-0000-0000-0000-000000000003',
    user2_id, trail4_id, 'Boucle familiale avec les enfants',
    '2025-08-10 10:00:00', '2025-08-10 11:30:00',
    8.5, 5400, 8.4, 18.2, 150, 150,
    'Ensoleillé, 22°C',
    'Les enfants ont adoré ! Superbe forêt et rivière. On recommence.', 'COMPLETED'),
 
-  ('r0000000-0000-0000-0000-000000000004',
+  ('d0000000-0000-0000-0000-000000000004',
    user3_id, trail3_id, 'Trajet domicile-boulot',
    '2025-09-18 08:15:00', '2025-09-18 08:52:00',
    9.2, 2220, 14.9, 25.6, 55, 52,
    'Couvert, 12°C, risque de pluie 40%',
    'Pas eu de pluie finalement. Un peu de circulation rue Sherbrooke mais ok.', 'COMPLETED'),
 
-  ('r0000000-0000-0000-0000-000000000005',
+  ('d0000000-0000-0000-0000-000000000005',
    user1_id, trail5_id, 'Gravel Montmorency — exploration',
    '2025-09-05 07:00:00', '2025-09-05 10:15:00',
    36.2, 11700, 11.1, 52.3, 635, 630,

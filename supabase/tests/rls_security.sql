@@ -60,6 +60,9 @@ BEGIN
 END;
 $$;
 
+GRANT USAGE ON SCHEMA rls_test TO authenticated;
+GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA rls_test TO authenticated;
+
 DO $$
 DECLARE
   user_a uuid := '00000000-0000-4000-8000-0000000000a1';
@@ -84,6 +87,8 @@ BEGIN
     (moderator_user, 'rls-moderator@example.test', 'test', now(), now(), now())
   ON CONFLICT (id) DO NOTHING;
 
+  ALTER TABLE profiles DISABLE TRIGGER prevent_profile_role_escalation;
+
   INSERT INTO profiles (id, full_name, is_private, role)
   VALUES
     (user_a, 'RLS User A', true, 'USER'),
@@ -94,6 +99,8 @@ BEGIN
   SET full_name = EXCLUDED.full_name,
       is_private = EXCLUDED.is_private,
       role = EXCLUDED.role;
+
+  ALTER TABLE profiles ENABLE TRIGGER prevent_profile_role_escalation;
 
   INSERT INTO trails (
     id,

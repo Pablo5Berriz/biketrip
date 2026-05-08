@@ -51,7 +51,7 @@ Commande locale :
 
 ```powershell
 npx supabase db reset
-npx supabase db query --local --file supabase/tests/rls_security.sql
+Get-Content supabase\tests\rls_security.sql -Raw | docker exec -i supabase_db_BikeTrip psql -U postgres -d postgres
 ```
 
 Commande staging, si une base de staging est fournie :
