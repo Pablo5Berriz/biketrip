@@ -110,3 +110,17 @@ CREATE POLICY "ride-photos: supprimer"
 CREATE POLICY "trail-covers: lecture publique"
   ON storage.objects FOR SELECT
   USING (bucket_id = 'trail-covers');
+
+CREATE POLICY "trail-covers: upload admin"
+  ON storage.objects FOR INSERT
+  WITH CHECK (
+    bucket_id = 'trail-covers'
+    AND current_user_role() IN ('ADMIN', 'SUPER_ADMIN')
+  );
+
+CREATE POLICY "trail-covers: supprimer admin"
+  ON storage.objects FOR DELETE
+  USING (
+    bucket_id = 'trail-covers'
+    AND current_user_role() IN ('ADMIN', 'SUPER_ADMIN')
+  );

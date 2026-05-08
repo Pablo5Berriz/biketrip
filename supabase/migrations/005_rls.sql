@@ -36,6 +36,22 @@ BEGIN
 END;
 $$;
 
+-- Empêcher l'auto-attribution de rôles élevés via update du profil
+CREATE OR REPLACE FUNCTION prevent_profile_role_escalation()
+RETURNS TRIGGER LANGUAGE plpgsql SECURITY DEFINER AS $$
+BEGIN
+  IF NEW.role IS DISTINCT FROM OLD.role
+     AND current_user_role() NOT IN ('ADMIN', 'SUPER_ADMIN') THEN
+    RAISE EXCEPTION 'Modification du rôle non autorisée';
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER prevent_profile_role_escalation
+  BEFORE UPDATE ON profiles
+  FOR EACH ROW EXECUTE FUNCTION prevent_profile_role_escalation();
+
 -- ============================================================
 -- POLICIES : profiles
 -- ============================================================
@@ -51,6 +67,11 @@ CREATE POLICY "profiles: modifier son propre profil"
 CREATE POLICY "profiles: admin lit tout"
   ON profiles FOR SELECT
   USING (current_user_role() IN ('ADMIN', 'SUPER_ADMIN'));
+
+CREATE POLICY "profiles: admin modifie tout"
+  ON profiles FOR UPDATE
+  USING (current_user_role() IN ('ADMIN', 'SUPER_ADMIN'))
+  WITH CHECK (current_user_role() IN ('ADMIN', 'SUPER_ADMIN'));
 
 -- ============================================================
 -- POLICIES : trails (lecture publique, écriture admin)
@@ -253,9 +274,9 @@ CREATE POLICY "weather: lecture publique"
   ON weather_snapshots FOR SELECT
   USING (true);
 
-CREATE POLICY "weather: insertion système"
+CREATE POLICY "weather: insertion admin"
   ON weather_snapshots FOR INSERT
-  WITH CHECK (auth.uid() IS NOT NULL);
+  WITH CHECK (current_user_role() IN ('ADMIN', 'SUPER_ADMIN'));
 
 -- ============================================================
 -- POLICIES : audit_logs
@@ -264,6 +285,6 @@ CREATE POLICY "audit: admin uniquement"
   ON audit_logs FOR SELECT
   USING (current_user_role() IN ('ADMIN', 'SUPER_ADMIN'));
 
-CREATE POLICY "audit: insertion système"
+CREATE POLICY "audit: insertion admin uniquement"
   ON audit_logs FOR INSERT
-  WITH CHECK (true);
+  WITH CHECK (current_user_role() IN ('ADMIN', 'SUPER_ADMIN'));
