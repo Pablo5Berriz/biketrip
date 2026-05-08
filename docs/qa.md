@@ -38,3 +38,30 @@ npm run lint
 npm run type-check
 npm test
 ```
+
+## Execution des tests RLS SQL
+
+Prerequis local :
+
+- Docker Desktop demarre.
+- Supabase CLI disponible via `npx supabase`.
+- Base locale initialisee avec les migrations du projet.
+
+Commande locale :
+
+```powershell
+npx supabase db reset
+npx supabase db query --local --file supabase/tests/rls_security.sql
+```
+
+Commande staging, si une base de staging est fournie :
+
+```powershell
+npx supabase db query --db-url "$env:DATABASE_URL" --file supabase/tests/rls_security.sql
+```
+
+Resultat attendu :
+
+- chaque assertion emet un `NOTICE: PASS`;
+- aucun `FAIL` ne doit apparaitre;
+- la transaction se termine par `ROLLBACK`, sans modifier durablement les donnees de test.
