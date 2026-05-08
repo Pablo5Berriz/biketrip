@@ -6,6 +6,7 @@ import {
   Check,
 } from 'lucide-react-native';
 import type { RideAdvice, RiskLevel } from '@/types/weather';
+import { colors } from '@/config/colors';
 
 // ============================================================
 // SafetyAdviceCard — Carte préparation avant départ
@@ -24,7 +25,7 @@ export function SafetyAdviceCard({ advice }: SafetyAdviceCardProps) {
       {/* Heure de départ conseillée */}
       {advice.bestDepartureTime && (
         <View className="flex-row items-center gap-2 bg-sky/10 rounded-xl p-3">
-          <Info size={16} color="#0EA5E9" />
+          <Info size={16} color={colors.sky} />
           <Text className="text-sm text-sky-600 flex-1">{advice.bestDepartureTime}</Text>
         </View>
       )}
@@ -36,7 +37,7 @@ export function SafetyAdviceCard({ advice }: SafetyAdviceCardProps) {
           className="flex-row items-start gap-3 bg-white rounded-xl p-3 border border-border"
         >
           <View className="w-8 h-8 rounded-full bg-primary-50 items-center justify-center mt-0.5">
-            <Info size={16} color="#16A34A" />
+            <Info size={16} color={colors.primary.DEFAULT} />
           </View>
           <Text className="text-sm text-carbon flex-1 leading-5">{a.message}</Text>
         </View>
@@ -53,7 +54,7 @@ export function SafetyAdviceCard({ advice }: SafetyAdviceCardProps) {
                   item.required ? 'bg-primary-600' : 'bg-border'
                 }`}
               >
-                <Check size={14} color={item.required ? 'white' : '#64748B'} />
+                <Check size={14} color={item.required ? 'white' : colors.slate} />
               </View>
               <Text className={`text-sm ${item.required ? 'text-carbon font-medium' : 'text-slate'}`}>
                 {item.label}
@@ -78,17 +79,17 @@ function RiskLevelBanner({ level, label }: { level: RiskLevel; label: string }) 
     textColor: string;
   }> = {
     LOW: {
-      bg: ['#16A34A', '#22C55E'],
+      bg: [colors.primary.DEFAULT, colors.success],
       icon: <CheckCircle size={24} color="white" />,
       textColor: 'white',
     },
     MODERATE: {
-      bg: ['#F59E0B', '#FBBF24'],
+      bg: [colors.warning, '#FBBF24'],
       icon: <Info size={24} color="white" />,
       textColor: 'white',
     },
     HIGH: {
-      bg: ['#F97316', '#FB923C'],
+      bg: [colors.accent.DEFAULT, '#FB923C'],
       icon: <AlertTriangle size={24} color="white" />,
       textColor: 'white',
     },

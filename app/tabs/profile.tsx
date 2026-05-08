@@ -6,9 +6,9 @@ import {
 import { router } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import {
-  Settings, Heart, Star, Shield,
+  Settings, Heart, Star,
   ChevronRight, LogOut, Activity,
-  Camera, Award, MapPin,
+  Camera, Award,
 } from 'lucide-react-native';
 import { useProfile, useIsAuthenticated, useUser } from '@/stores/authStore';
 import { getRideStats } from '@/features/rides/rideService';
@@ -54,10 +54,16 @@ export default function ProfileScreen() {
           <TouchableOpacity
             onPress={() => router.push('/auth/login')}
             className="w-full bg-primary-600 rounded-2xl py-4 items-center"
+            accessibilityRole="button"
+            accessibilityLabel="Se connecter"
           >
             <Text className="text-white font-bold text-base">Se connecter</Text>
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => router.push('/auth/register')}>
+          <TouchableOpacity
+            onPress={() => router.push('/auth/register')}
+            accessibilityRole="button"
+            accessibilityLabel="Créer un compte"
+          >
             <Text className="text-primary-600 text-sm font-semibold">
               Créer un compte →
             </Text>
@@ -89,6 +95,8 @@ export default function ProfileScreen() {
           <TouchableOpacity
             onPress={() => router.push('/settings/index')}
             className="relative"
+            accessibilityRole="button"
+            accessibilityLabel="Modifier mon profil"
           >
             {avatarUrl ? (
               <Image
@@ -169,10 +177,10 @@ export default function ProfileScreen() {
               iconBg={`${colors.accent.DEFAULT}18`}
             />
             <MenuRow
-              icon={<Star size={18} color="#F59E0B" />}
+              icon={<Star size={18} color={colors.warning} />}
               label="Mes collections"
               onPress={() => router.push('/collections/index')}
-              iconBg="#F59E0B18"
+              iconBg={`${colors.warning}18`}
               isLast
             />
           </SectionBlock>
@@ -184,21 +192,7 @@ export default function ProfileScreen() {
               label="Paramètres"
               sublabel="Profil, vélo, notifications..."
               onPress={() => router.push('/settings/index')}
-              iconBg="#94A3B818"
-            />
-            {profile?.role === 'ADMIN' || profile?.role === 'MODERATOR' ? (
-              <MenuRow
-                icon={<Shield size={18} color={colors.elevation} />}
-                label="Administration"
-                onPress={() => router.push('/admin/index')}
-                iconBg={`${colors.elevation}18`}
-              />
-            ) : null}
-            <MenuRow
-              icon={<MapPin size={18} color={colors.sky} />}
-              label="Mes signalements"
-              onPress={() => router.push('/reports/mine')}
-              iconBg={`${colors.sky}18`}
+              iconBg={`${colors.placeholder}18`}
               isLast
             />
           </SectionBlock>
@@ -208,6 +202,8 @@ export default function ProfileScreen() {
             onPress={handleSignOut}
             className="bg-white rounded-2xl border border-danger/30 p-4 flex-row items-center justify-between"
             activeOpacity={0.8}
+            accessibilityRole="button"
+            accessibilityLabel="Se déconnecter"
           >
             <View className="flex-row items-center gap-3">
               <View className="w-9 h-9 rounded-xl items-center justify-center bg-danger/10">
@@ -256,6 +252,8 @@ function MenuRow({
       onPress={onPress}
       className={`flex-row items-center px-4 py-3.5 gap-3 ${!isLast ? 'border-b border-border' : ''}`}
       activeOpacity={0.7}
+      accessibilityRole="button"
+      accessibilityLabel={label}
     >
       <View
         className="w-9 h-9 rounded-xl items-center justify-center"

@@ -6,7 +6,7 @@ import {
   Droplets, Eye, Zap, CloudDrizzle,
 } from 'lucide-react-native';
 import type { WeatherData, WeatherCondition } from '@/types/weather';
-import { gradients } from '@/config/colors';
+import { colors, gradients } from '@/config/colors';
 
 // ============================================================
 // WeatherCard — Carte météo BikeTrip
@@ -33,11 +33,11 @@ export function WeatherCard({ weather, compact = false }: WeatherCardProps) {
         </View>
         <View className="items-end gap-1">
           <View className="flex-row items-center gap-1">
-            <Wind size={12} color="#0EA5E9" />
+            <Wind size={12} color={colors.sky} />
             <Text className="text-xs text-slate">{weather.wind_speed_kmh} km/h</Text>
           </View>
           <View className="flex-row items-center gap-1">
-            <Droplets size={12} color="#0EA5E9" />
+            <Droplets size={12} color={colors.sky} />
             <Text className="text-xs text-slate">{weather.precipitation_probability}%</Text>
           </View>
         </View>

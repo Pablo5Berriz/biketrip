@@ -43,6 +43,8 @@ export default function TrailReviewScreen() {
           <TouchableOpacity
             onPress={() => router.back()}
             className="w-10 h-10 rounded-full items-center justify-center"
+            accessibilityRole="button"
+            accessibilityLabel="Revenir à l'écran précédent"
           >
             <ArrowLeft size={20} color={colors.carbon} />
           </TouchableOpacity>
@@ -55,11 +57,16 @@ export default function TrailReviewScreen() {
             <Text className="text-base font-semibold text-carbon">Ta note *</Text>
             <View className="flex-row gap-3">
               {[1, 2, 3, 4, 5].map((s) => (
-                <TouchableOpacity key={s} onPress={() => setRating(s)}>
+                <TouchableOpacity
+                  key={s}
+                  onPress={() => setRating(s)}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Donner ${s} étoile${s > 1 ? 's' : ''}`}
+                >
                   <Star
                     size={40}
-                    color="#F59E0B"
-                    fill={s <= rating ? '#F59E0B' : 'transparent'}
+                    color={colors.warning}
+                    fill={s <= rating ? colors.warning : 'transparent'}
                   />
                 </TouchableOpacity>
               ))}
@@ -75,7 +82,7 @@ export default function TrailReviewScreen() {
             <View className="bg-white border border-border rounded-2xl px-4 py-3 flex-1">
               <TextInput
                 placeholder="Partage ton expérience sur cette piste : conditions, points forts, conseils..."
-                placeholderTextColor="#94A3B8"
+                placeholderTextColor={colors.placeholder}
                 value={comment}
                 onChangeText={setComment}
                 multiline

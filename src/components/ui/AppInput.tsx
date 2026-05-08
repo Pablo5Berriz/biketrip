@@ -5,6 +5,7 @@ import {
   type TextInputProps,
 } from 'react-native';
 import { Eye, EyeOff } from 'lucide-react-native';
+import { colors } from '@/config/colors';
 
 // ============================================================
 // AppInput — Champ de saisie BikeTrip
@@ -50,7 +51,7 @@ export function AppInput({
 
         <TextInput
           className="flex-1 text-base text-carbon py-3"
-          placeholderTextColor="#94A3B8"
+          placeholderTextColor={colors.placeholder}
           secureTextEntry={isPassword && !showPassword}
           autoCapitalize={isPassword ? 'none' : props.autoCapitalize}
           {...props}
@@ -60,11 +61,13 @@ export function AppInput({
           <TouchableOpacity
             onPress={() => setShowPassword(!showPassword)}
             className="ml-3"
+            accessibilityRole="button"
+            accessibilityLabel={showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
             {showPassword
-              ? <EyeOff size={20} color="#64748B" />
-              : <Eye size={20} color="#64748B" />
+              ? <EyeOff size={20} color={colors.slate} />
+              : <Eye size={20} color={colors.slate} />
             }
           </TouchableOpacity>
         ) : rightIcon ? (

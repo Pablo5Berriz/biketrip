@@ -124,7 +124,7 @@ export function TrailCard({ trail, onPress, compact = false }: TrailCardProps) {
 
           {trail.average_rating > 0 && (
             <View className="flex-row items-center gap-1 ml-auto">
-              <Star size={14} color="#F59E0B" fill="#F59E0B" />
+              <Star size={14} color={colors.warning} fill={colors.warning} />
               <Text className="text-sm font-semibold text-carbon">
                 {trail.average_rating.toFixed(1)}
               </Text>

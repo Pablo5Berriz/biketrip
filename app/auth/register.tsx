@@ -75,7 +75,12 @@ export default function RegisterScreen() {
           <View className="flex-1 bg-white p-6 gap-5">
             {/* Header */}
             <View className="gap-1 mb-2">
-              <TouchableOpacity onPress={() => router.back()} className="mb-4">
+              <TouchableOpacity
+                onPress={() => router.back()}
+                className="mb-4"
+                accessibilityRole="button"
+                accessibilityLabel="Revenir à l'écran précédent"
+              >
                 <Text className="text-primary-600 text-base">← Retour</Text>
               </TouchableOpacity>
               <Text className="text-2xl font-bold text-carbon">Créer un compte</Text>
@@ -170,7 +175,11 @@ export default function RegisterScreen() {
 
             <View className="flex-row justify-center items-center gap-2">
               <Text className="text-slate text-sm">Déjà un compte ?</Text>
-              <TouchableOpacity onPress={() => router.replace('/auth/login')}>
+              <TouchableOpacity
+                onPress={() => router.replace('/auth/login')}
+                accessibilityRole="button"
+                accessibilityLabel="Se connecter"
+              >
                 <Text className="text-primary-600 text-sm font-bold">Se connecter</Text>
               </TouchableOpacity>
             </View>

@@ -81,6 +81,8 @@ export default function SettingsScreen() {
         <TouchableOpacity
           onPress={() => router.back()}
           className="w-10 h-10 rounded-full items-center justify-center"
+          accessibilityRole="button"
+          accessibilityLabel="Revenir à l'écran précédent"
         >
           <ArrowLeft size={20} color={colors.carbon} />
         </TouchableOpacity>
@@ -99,7 +101,12 @@ export default function SettingsScreen() {
       >
         {/* Avatar */}
         <View className="items-center gap-3">
-          <TouchableOpacity onPress={handleAvatarChange} disabled={uploadingAvatar}>
+          <TouchableOpacity
+            onPress={handleAvatarChange}
+            disabled={uploadingAvatar}
+            accessibilityRole="button"
+            accessibilityLabel="Changer l'avatar"
+          >
             {avatarUrl ? (
               <Image
                 source={{ uri: avatarUrl }}
@@ -184,6 +191,8 @@ export default function SettingsScreen() {
                             ? 'bg-primary-600 border-primary-600'
                             : 'bg-white border-border'
                         }`}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Choisir le niveau ${CYCLING_LEVEL_LABELS[level]}`}
                       >
                         <Text className={`text-sm font-medium ${value === level ? 'text-white' : 'text-carbon'}`}>
                           {CYCLING_LEVEL_LABELS[level]}
@@ -212,6 +221,8 @@ export default function SettingsScreen() {
                             ? 'bg-secondary-600 border-secondary-600'
                             : 'bg-white border-border'
                         }`}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Choisir le type de vélo ${BIKE_TYPE_LABELS[bike]}`}
                       >
                         <Text className={`text-sm font-medium ${value === bike ? 'text-white' : 'text-carbon'}`}>
                           {BIKE_TYPE_LABELS[bike]}
@@ -240,6 +251,8 @@ export default function SettingsScreen() {
           <TouchableOpacity
             onPress={() => router.push('/auth/forgot-password')}
             className="p-4 flex-row items-center justify-between"
+            accessibilityRole="button"
+            accessibilityLabel="Changer le mot de passe"
           >
             <Text className="text-carbon text-sm">Changer le mot de passe</Text>
             <ChevronDown

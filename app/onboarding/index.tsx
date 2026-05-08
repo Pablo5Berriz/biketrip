@@ -9,6 +9,7 @@ import * as SecureStore from 'expo-secure-store';
 import {
   Map, CloudSun, Users, Zap,
 } from 'lucide-react-native';
+import { colors, gradients } from '@/config/colors';
 
 const { width } = Dimensions.get('window');
 
@@ -19,25 +20,25 @@ const { width } = Dimensions.get('window');
 const slides = [
   {
     icon: <Map size={64} color="white" />,
-    gradient: ['#16A34A', '#0EA5E9'] as [string, string],
+    gradient: [colors.primary.DEFAULT, colors.sky] as [string, string],
     title: 'Découvre les meilleures\npistes cyclables',
     description: 'Trouve les pistes adaptées à ton niveau, ton vélo et tes envies. Explore la carte et pars à l\'aventure.',
   },
   {
     icon: <CloudSun size={64} color="white" />,
-    gradient: ['#0EA5E9', '#38BDF8'] as [string, string],
+    gradient: gradients.weather as [string, string],
     title: 'Prépare tes sorties avec\nmétéo et dénivelé',
     description: 'Consulte la météo en temps réel, le profil d\'élévation et reçois des conseils adaptés à chaque trajet.',
   },
   {
     icon: <Users size={64} color="white" />,
-    gradient: ['#F97316', '#FBBF24'] as [string, string],
+    gradient: [colors.accent.DEFAULT, '#FBBF24'] as [string, string],
     title: 'Roule mieux grâce aux\nsignalements communautaires',
     description: 'Les cyclistes signalent en temps réel les obstacles, travaux, verglas et dangers sur les pistes.',
   },
   {
     icon: <Zap size={64} color="white" />,
-    gradient: ['#7C3AED', '#16A34A'] as [string, string],
+    gradient: gradients.elevation as [string, string],
     title: 'Reçois des conseils\nadaptés à ton trajet',
     description: 'BikeTrip analyse météo, dénivelé et signalements pour te donner les meilleurs conseils avant de partir.',
   },
@@ -129,6 +130,8 @@ export default function OnboardingScreen() {
               <TouchableOpacity
                 onPress={() => router.push('/auth/register')}
                 className="bg-white rounded-2xl py-4 items-center"
+                accessibilityRole="button"
+                accessibilityLabel="Créer un compte"
               >
                 <Text className="text-base font-bold text-primary-600">
                   Créer un compte
@@ -137,6 +140,8 @@ export default function OnboardingScreen() {
               <TouchableOpacity
                 onPress={finish}
                 className="py-3 items-center"
+                accessibilityRole="button"
+                accessibilityLabel="Se connecter avec un compte existant"
               >
                 <Text className="text-white/85 text-base">
                   Déjà un compte ? Se connecter
@@ -145,12 +150,18 @@ export default function OnboardingScreen() {
             </View>
           ) : (
             <View className="flex-row justify-between items-center">
-              <TouchableOpacity onPress={finish}>
+              <TouchableOpacity
+                onPress={finish}
+                accessibilityRole="button"
+                accessibilityLabel="Passer l'introduction"
+              >
                 <Text className="text-white/70 text-base">Passer</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={goNext}
                 className="bg-white rounded-2xl px-8 py-4"
+                accessibilityRole="button"
+                accessibilityLabel="Afficher l'écran suivant"
               >
                 <Text className="text-base font-bold" style={{ color: slide.gradient[0] }}>
                   Suivant

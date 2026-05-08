@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text } from 'react-native';
 import { AppCard } from '@/components/ui/AppCard';
+import { colors } from '@/config/colors';
 
 // ============================================================
 // StatTile — Tuile statistique (distance, durée, vitesse…)
@@ -20,7 +21,7 @@ export function StatTile({
   value,
   unit,
   icon,
-  color = '#16A34A',
+  color = colors.primary.DEFAULT,
   large = false,
 }: StatTileProps) {
   return (
@@ -87,19 +88,19 @@ export function RideTrackingPanel({
         <StatTile
           label="Durée"
           value={durationStr}
-          color="#102A43"
+          color={colors.secondary.DEFAULT}
         />
         <StatTile
           label="Vitesse"
           value={speedKmh.toFixed(1)}
           unit="km/h"
-          color="#0EA5E9"
+          color={colors.sky}
         />
         <StatTile
           label="Moy."
           value={averageSpeedKmh.toFixed(1)}
           unit="km/h"
-          color="#7C3AED"
+          color={colors.elevation}
         />
       </View>
     </View>

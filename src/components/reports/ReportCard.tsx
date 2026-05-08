@@ -10,6 +10,7 @@ import type { Report } from '@/types/database';
 import { REPORT_TYPE_LABELS, REPORT_SEVERITY_COLORS } from '@/lib/constants/labels';
 import { formatDistanceToNow } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import { colors } from '@/config/colors';
 
 // ============================================================
 // ReportCard — Carte de signalement
@@ -105,7 +106,7 @@ export function ReportCard({
         {/* Footer */}
         <View className="flex-row items-center justify-between pt-1 border-t border-border">
           <View className="flex-row items-center gap-1">
-            <MapPin size={12} color="#64748B" />
+            <MapPin size={12} color={colors.slate} />
             <Text className="text-xs text-slate">{timeAgo}</Text>
           </View>
 
@@ -115,8 +116,10 @@ export function ReportCard({
                 onPress={onConfirm}
                 className="flex-row items-center gap-1"
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                accessibilityRole="button"
+                accessibilityLabel="Confirmer ce signalement"
               >
-                <ThumbsUp size={14} color="#64748B" />
+                <ThumbsUp size={14} color={colors.slate} />
                 <Text className="text-xs text-slate">
                   {report.confirmed_count} confirmé{report.confirmed_count > 1 ? 's' : ''}
                 </Text>
@@ -127,8 +130,10 @@ export function ReportCard({
                 onPress={onResolve}
                 className="flex-row items-center gap-1"
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                accessibilityRole="button"
+                accessibilityLabel="Marquer ce signalement comme résolu"
               >
-                <CheckCircle size={14} color="#16A34A" />
+                <CheckCircle size={14} color={colors.primary.DEFAULT} />
                 <Text className="text-xs text-primary-600">Résolu</Text>
               </TouchableOpacity>
             )}

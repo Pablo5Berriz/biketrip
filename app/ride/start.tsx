@@ -22,6 +22,7 @@ import { useLocation } from '@/hooks/useLocation';
 import { formatDistance, formatDuration } from '@/lib/geo/geoUtils';
 import { colors } from '@/config/colors';
 import type { AdviceInput } from '@/features/advice/adviceEngine';
+import type { Report } from '@/types/database';
 
 // ============================================================
 // Écran Préparation — Avant de démarrer une sortie
@@ -30,7 +31,7 @@ import type { AdviceInput } from '@/features/advice/adviceEngine';
 export default function RideStartScreen() {
   const { trailId } = useLocalSearchParams<{ trailId?: string }>();
   const profile = useProfile();
-  const { location } = useLocation();
+  const { location, hasPermission, error: locationError } = useLocation();
 
   const trailQuery = useQuery({
     queryKey: ['trail', trailId],
@@ -88,6 +89,8 @@ export default function RideStartScreen() {
         <TouchableOpacity
           onPress={() => router.back()}
           className="w-10 h-10 bg-white rounded-full items-center justify-center border border-border"
+          accessibilityRole="button"
+          accessibilityLabel="Revenir à l'écran précédent"
         >
           <ArrowLeft size={20} color={colors.carbon} />
         </TouchableOpacity>
@@ -106,6 +109,15 @@ export default function RideStartScreen() {
           contentContainerStyle={{ padding: 16, paddingBottom: 32, gap: 16 }}
           showsVerticalScrollIndicator={false}
         >
+          {(hasPermission === false || locationError) && (
+            <View className="bg-white rounded-2xl p-4 border border-warning/40 gap-1">
+              <Text className="text-carbon font-semibold text-sm">Localisation indisponible</Text>
+              <Text className="text-slate text-xs">
+                Active la permission de localisation pour voir les pistes et conditions autour de toi.
+              </Text>
+            </View>
+          )}
+
           {/* Résumé de la piste */}
           {trail && (
             <View className="bg-white rounded-2xl p-4 border border-border gap-3">
@@ -158,7 +170,7 @@ export default function RideStartScreen() {
                   {reportsQuery.data!.data!.length} signalement(s) actif(s) à proximité
                 </Text>
               </View>
-              {reportsQuery.data!.data!.slice(0, 2).map((r: any) => (
+              {reportsQuery.data!.data!.slice(0, 2).map((r: Report) => (
                 <Text key={r.id} className="text-xs text-carbon ml-6" numberOfLines={1}>
                   · {r.title}
                 </Text>
@@ -187,6 +199,8 @@ export default function RideStartScreen() {
             }
             className="bg-primary-600 rounded-2xl py-5 flex-row items-center justify-center gap-3 mt-2"
             activeOpacity={0.85}
+            accessibilityRole="button"
+            accessibilityLabel="Démarrer le suivi GPS"
           >
             <View className="w-10 h-10 bg-white/20 rounded-full items-center justify-center">
               <Play size={22} color="white" fill="white" />
@@ -202,6 +216,8 @@ export default function RideStartScreen() {
             <TouchableOpacity
               onPress={() => router.replace('/ride/active')}
               className="py-3 items-center"
+              accessibilityRole="button"
+              accessibilityLabel="Démarrer une sortie sans sélectionner de piste"
             >
               <Text className="text-slate text-sm">
                 Démarrer sans sélectionner de piste →

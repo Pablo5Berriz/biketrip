@@ -26,7 +26,7 @@ import { colors } from '@/config/colors';
 
 export default function HomeScreen() {
   const profile = useProfile();
-  const { location } = useLocation();
+  const { location, hasPermission, error: locationError } = useLocation();
 
   const weatherQuery = useQuery({
     queryKey: ['weather', location?.latitude, location?.longitude],
@@ -100,6 +100,8 @@ export default function HomeScreen() {
             onPress={() => router.push('/ride/start')}
             className="flex-1 bg-primary-600 rounded-2xl p-4 flex-row items-center gap-3"
             activeOpacity={0.85}
+            accessibilityRole="button"
+            accessibilityLabel="Démarrer une sortie"
           >
             <View className="w-10 h-10 bg-white/20 rounded-full items-center justify-center">
               <Play size={20} color="white" fill="white" />
@@ -114,6 +116,8 @@ export default function HomeScreen() {
             onPress={() => router.push('/(tabs)/map')}
             className="flex-1 bg-secondary-600 rounded-2xl p-4 flex-row items-center gap-3"
             activeOpacity={0.85}
+            accessibilityRole="button"
+            accessibilityLabel="Trouver une piste sur la carte"
           >
             <View className="w-10 h-10 bg-white/20 rounded-full items-center justify-center">
               <MapPin size={20} color="white" />
@@ -124,6 +128,15 @@ export default function HomeScreen() {
             </View>
           </TouchableOpacity>
         </View>
+
+        {(hasPermission === false || locationError) && (
+          <View className="mx-5 mb-5 bg-white rounded-2xl p-4 border border-warning/40 gap-1">
+            <Text className="text-carbon font-semibold text-sm">Localisation indisponible</Text>
+            <Text className="text-slate text-xs">
+              Active la permission de localisation pour voir les pistes autour de toi.
+            </Text>
+          </View>
+        )}
 
         {/* Signalements proches */}
         {(nearbyReportsQuery.data?.data ?? []).length > 0 && (
@@ -146,7 +159,6 @@ export default function HomeScreen() {
                   <ReportCard
                     report={report}
                     compact
-                    onPress={() => router.push(`/reports/${report.id}`)}
                   />
                 </View>
               ))}
@@ -161,6 +173,8 @@ export default function HomeScreen() {
             <TouchableOpacity
               onPress={() => router.push('/(tabs)/discover')}
               className="flex-row items-center gap-1"
+              accessibilityRole="button"
+              accessibilityLabel="Voir toutes les pistes proches"
             >
               <Text className="text-primary-600 text-sm font-medium">Voir tout</Text>
               <ChevronRight size={16} color={colors.primary.DEFAULT} />

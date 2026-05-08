@@ -39,6 +39,8 @@ export const colors = {
   carbon: '#111827',
   textPrimary:   '#111827',
   textSecondary: '#64748B',
+  slate: '#64748B',
+  placeholder: '#94A3B8',
   border: '#E2E8F0',
   // Dark mode
   dark: {

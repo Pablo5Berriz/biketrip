@@ -5,6 +5,7 @@ import {
   DIFFICULTY_LABELS, SURFACE_LABELS, REPORT_SEVERITY_LABELS,
   DIFFICULTY_COLORS, REPORT_SEVERITY_COLORS,
 } from '@/lib/constants/labels';
+import { colors } from '@/config/colors';
 
 // ============================================================
 // Badges — Difficulté, Surface, Gravité
@@ -80,7 +81,7 @@ interface AppBadgeProps {
 
 export function AppBadge({
   label,
-  color = '#64748B',
+  color = colors.slate,
   bgColor,
   small = false,
 }: AppBadgeProps) {

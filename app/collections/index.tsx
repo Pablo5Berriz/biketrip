@@ -46,16 +46,20 @@ export default function CollectionsScreen() {
         <TouchableOpacity
           onPress={() => router.back()}
           className="w-10 h-10 rounded-full items-center justify-center"
+          accessibilityRole="button"
+          accessibilityLabel="Revenir à l'écran précédent"
         >
           <ArrowLeft size={20} color={colors.carbon} />
         </TouchableOpacity>
         <View className="flex-row items-center gap-2 flex-1">
-          <Bookmark size={18} color="#F59E0B" fill="#F59E0B" />
+          <Bookmark size={18} color={colors.warning} fill={colors.warning} />
           <Text className="text-lg font-bold text-carbon">Mes collections</Text>
         </View>
         <TouchableOpacity
           onPress={() => setShowModal(true)}
           className="w-10 h-10 bg-primary-600 rounded-full items-center justify-center"
+          accessibilityRole="button"
+          accessibilityLabel="Créer une collection"
         >
           <Plus size={18} color="white" />
         </TouchableOpacity>
@@ -88,11 +92,13 @@ export default function CollectionsScreen() {
               onPress={() => router.push({ pathname: '/collections/[id]', params: { id: item.id } })}
               className="bg-white rounded-2xl p-4 border border-border gap-2"
               activeOpacity={0.8}
+              accessibilityRole="button"
+              accessibilityLabel={`Ouvrir la collection ${item.name}`}
             >
               <View className="flex-row items-center justify-between">
                 <View className="flex-row items-center gap-3 flex-1">
                   <View className="w-12 h-12 bg-warning/10 rounded-xl items-center justify-center">
-                    <Bookmark size={22} color="#F59E0B" />
+                    <Bookmark size={22} color={colors.warning} />
                   </View>
                   <View className="flex-1">
                     <Text className="text-carbon font-bold text-base" numberOfLines={1}>
@@ -123,7 +129,11 @@ export default function CollectionsScreen() {
           <View className="bg-white rounded-t-3xl p-6 gap-4">
             <View className="flex-row items-center justify-between">
               <Text className="text-lg font-bold text-carbon">Nouvelle collection</Text>
-              <TouchableOpacity onPress={() => setShowModal(false)}>
+              <TouchableOpacity
+                onPress={() => setShowModal(false)}
+                accessibilityRole="button"
+                accessibilityLabel="Fermer la création de collection"
+              >
                 <X size={20} color={colors.textSecondary} />
               </TouchableOpacity>
             </View>
@@ -133,7 +143,7 @@ export default function CollectionsScreen() {
               <View className="bg-gray-50 border border-border rounded-xl px-4 py-3">
                 <TextInput
                   placeholder="Ex. : Pistes du week-end"
-                  placeholderTextColor="#94A3B8"
+                  placeholderTextColor={colors.placeholder}
                   value={newName}
                   onChangeText={setNewName}
                   className="text-carbon text-sm"
@@ -146,7 +156,7 @@ export default function CollectionsScreen() {
               <View className="bg-gray-50 border border-border rounded-xl px-4 py-3">
                 <TextInput
                   placeholder="Décris ta collection..."
-                  placeholderTextColor="#94A3B8"
+                  placeholderTextColor={colors.placeholder}
                   value={newDescription}
                   onChangeText={setNewDescription}
                   multiline
@@ -165,6 +175,8 @@ export default function CollectionsScreen() {
                 newName.trim() ? 'bg-primary-600' : 'bg-gray-200'
               }`}
               disabled={!newName.trim() || createMutation.isPending}
+              accessibilityRole="button"
+              accessibilityLabel="Créer la collection"
             >
               <Text
                 className={`font-bold text-base ${

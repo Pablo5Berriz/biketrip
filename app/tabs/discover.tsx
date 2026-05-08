@@ -72,12 +72,16 @@ export default function DiscoverScreen() {
           <TextInput
             className="flex-1 py-3 text-base text-carbon"
             placeholder="Rechercher une piste..."
-            placeholderTextColor="#94A3B8"
+            placeholderTextColor={colors.placeholder}
             value={query}
             onChangeText={setQuery}
           />
           {query.length > 0 && (
-            <TouchableOpacity onPress={() => setQuery('')}>
+            <TouchableOpacity
+              onPress={() => setQuery('')}
+              accessibilityRole="button"
+              accessibilityLabel="Effacer la recherche"
+            >
               <X size={18} color={colors.textSecondary} />
             </TouchableOpacity>
           )}
@@ -98,6 +102,8 @@ export default function DiscoverScreen() {
                   ? 'bg-primary-600 border-primary-600'
                   : 'bg-white border-border'
               }`}
+              accessibilityRole="button"
+              accessibilityLabel={`Filtrer par ${TRAIL_TYPE_LABELS[item]}`}
             >
               <Text
                 className={`text-sm font-semibold ${
@@ -117,6 +123,8 @@ export default function DiscoverScreen() {
               key={d}
               onPress={() => setSelectedDifficulty(selectedDifficulty === d ? undefined : d)}
               style={{ opacity: selectedDifficulty && selectedDifficulty !== d ? 0.5 : 1 }}
+              accessibilityRole="button"
+              accessibilityLabel="Filtrer par difficulté"
             >
               <DifficultyBadge difficulty={d} />
             </TouchableOpacity>
@@ -125,6 +133,8 @@ export default function DiscoverScreen() {
             <TouchableOpacity
               onPress={clearFilters}
               className="flex-row items-center gap-1 rounded-full px-3 py-1 bg-slate/10"
+              accessibilityRole="button"
+              accessibilityLabel="Effacer les filtres"
             >
               <X size={12} color={colors.textSecondary} />
               <Text className="text-xs text-slate font-medium">Effacer</Text>

@@ -72,7 +72,12 @@ export default function ForgotPasswordScreen() {
         <View className="flex-1 bg-white p-6 gap-6">
           {/* Header */}
           <View className="gap-1">
-            <TouchableOpacity onPress={() => router.back()} className="mb-4">
+            <TouchableOpacity
+              onPress={() => router.back()}
+              className="mb-4"
+              accessibilityRole="button"
+              accessibilityLabel="Revenir à l'écran précédent"
+            >
               <View className="flex-row items-center gap-2">
                 <ArrowLeft size={18} color={colors.primary.DEFAULT} />
                 <Text className="text-primary-600 text-base">Retour</Text>

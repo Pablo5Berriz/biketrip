@@ -38,6 +38,7 @@ export function AppCard({
       <TouchableOpacity
         onPress={onPress}
         activeOpacity={0.92}
+        accessibilityRole="button"
         className={baseClass}
         {...props}
       >

@@ -4,7 +4,7 @@ import {
   type TouchableOpacityProps, View,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { gradients } from '@/config/colors';
+import { colors, gradients } from '@/config/colors';
 
 // ============================================================
 // AppButton — Bouton principal BikeTrip
@@ -53,7 +53,7 @@ const textSizeClasses: Record<ButtonSize, string> = {
   lg: 'text-lg font-bold',
 };
 
-const minHeights: Record<ButtonSize, number> = { sm: 40, md: 48, lg: 56 };
+const minHeights: Record<ButtonSize, number> = { sm: 44, md: 48, lg: 56 };
 
 export function AppButton({
   label,
@@ -74,7 +74,7 @@ export function AppButton({
       {loading ? (
         <ActivityIndicator
           size="small"
-          color={variant === 'ghost' ? '#111827' : '#FFFFFF'}
+          color={variant === 'ghost' ? colors.carbon : colors.surface}
         />
       ) : (
         <>
@@ -97,6 +97,8 @@ export function AppButton({
         onPress={onPress}
         disabled={isDisabled}
         activeOpacity={0.85}
+        accessibilityRole="button"
+        accessibilityLabel={rest.accessibilityLabel ?? label}
         style={{
           width: fullWidth ? '100%' : undefined,
           opacity: isDisabled ? 0.5 : 1,
@@ -122,6 +124,8 @@ export function AppButton({
       onPress={onPress}
       disabled={isDisabled}
       activeOpacity={0.85}
+      accessibilityRole="button"
+      accessibilityLabel={rest.accessibilityLabel ?? label}
       className={`${variantClasses[variant]} ${sizeClasses[size]} items-center justify-center`}
       style={{
         width: fullWidth ? '100%' : undefined,

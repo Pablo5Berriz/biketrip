@@ -24,7 +24,7 @@ import { colors } from '@/config/colors';
 
 export default function MapScreen() {
   const mapRef = useRef<MapView>(null);
-  const { location } = useLocation();
+  const { location, hasPermission, error: locationError } = useLocation();
   const { selectedTrailId, setSelectedTrailId, filters } = useMapStore();
 
   const trailsQuery = useQuery({
@@ -116,7 +116,6 @@ export default function MapScreen() {
               latitude: report.latitude,
               longitude: report.longitude,
             }}
-            onPress={() => router.push(`/reports/${report.id}`)}
           >
             <View
               className="rounded-full p-1.5 border-2 border-white"
@@ -140,6 +139,8 @@ export default function MapScreen() {
           <TouchableOpacity
             onPress={() => router.push('/(tabs)/discover')}
             className="bg-white rounded-2xl px-4 py-3.5 flex-row items-center gap-3 shadow-float"
+            accessibilityRole="button"
+            accessibilityLabel="Rechercher une piste"
           >
             <MapPin size={18} color={colors.textSecondary} />
             <Text className="text-slate text-base flex-1">Rechercher une piste...</Text>
@@ -156,6 +157,8 @@ export default function MapScreen() {
         <TouchableOpacity
           onPress={centerOnUser}
           className="w-12 h-12 bg-white rounded-full items-center justify-center shadow-float"
+          accessibilityRole="button"
+          accessibilityLabel="Recentrer la carte sur ma position"
         >
           <Navigation size={22} color={colors.primary.DEFAULT} />
         </TouchableOpacity>
@@ -163,6 +166,8 @@ export default function MapScreen() {
           onPress={() => router.push('/reports/new')}
           className="w-12 h-12 rounded-full items-center justify-center shadow-float"
           style={{ backgroundColor: colors.accent.DEFAULT }}
+          accessibilityRole="button"
+          accessibilityLabel="Créer un signalement"
         >
           <Plus size={22} color="white" />
         </TouchableOpacity>
@@ -197,6 +202,8 @@ export default function MapScreen() {
           <TouchableOpacity
             onPress={() => setSelectedTrailId(null)}
             className="mt-3 py-2 items-center"
+            accessibilityRole="button"
+            accessibilityLabel="Fermer la fiche de la piste"
           >
             <Text className="text-slate text-sm">Fermer</Text>
           </TouchableOpacity>
@@ -210,6 +217,18 @@ export default function MapScreen() {
           className="bg-white rounded-full px-4 py-2 shadow-float flex-row items-center gap-2"
         >
           <LoadingState message="Chargement des pistes..." />
+        </View>
+      )}
+
+      {(hasPermission === false || locationError) && (
+        <View
+          style={{ position: 'absolute', left: 16, right: 16, bottom: selectedTrail ? 360 : 160 }}
+          className="bg-white rounded-2xl border border-warning/40 p-4 shadow-float"
+        >
+          <Text className="text-carbon font-semibold text-sm">Localisation indisponible</Text>
+          <Text className="text-slate text-xs mt-1">
+            Active la permission de localisation pour voir les pistes autour de toi.
+          </Text>
         </View>
       )}
     </View>

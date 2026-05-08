@@ -36,7 +36,7 @@ const SEVERITIES: ReportSeverity[] = ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'];
 
 export default function NewReportScreen() {
   const { trailId } = useLocalSearchParams<{ trailId?: string }>();
-  const { location } = useLocation();
+  const { location, hasPermission, error: locationError } = useLocation();
   const isAuthenticated = useIsAuthenticated();
   const user = useUser();
   const qc = useQueryClient();
@@ -120,6 +120,8 @@ export default function NewReportScreen() {
           <TouchableOpacity
             onPress={() => router.back()}
             className="w-10 h-10 rounded-full items-center justify-center"
+            accessibilityRole="button"
+            accessibilityLabel="Revenir à l'écran précédent"
           >
             <ArrowLeft size={20} color={colors.carbon} />
           </TouchableOpacity>
@@ -134,7 +136,9 @@ export default function NewReportScreen() {
           <View className="bg-sky/10 rounded-2xl p-3 flex-row items-center gap-2">
             <MapPin size={16} color={colors.sky} />
             <Text className="text-sky text-sm flex-1">
-              {location
+              {hasPermission === false || locationError
+                ? 'Localisation indisponible. Active la permission de localisation pour placer le signalement.'
+                : location
                 ? `Position GPS : ${location.latitude.toFixed(5)}, ${location.longitude.toFixed(5)}`
                 : 'En attente du GPS...'}
             </Text>
@@ -159,6 +163,8 @@ export default function NewReportScreen() {
                           ? 'bg-primary-600 border-primary-600'
                           : 'bg-white border-border'
                       }`}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Choisir le type ${REPORT_TYPE_LABELS[type]}`}
                     >
                       <Text
                         className={`text-xs font-medium ${
@@ -199,6 +205,8 @@ export default function NewReportScreen() {
                           ? { backgroundColor: REPORT_SEVERITY_COLORS[sev] }
                           : { borderColor: REPORT_SEVERITY_COLORS[sev], borderWidth: 2 }
                       }
+                      accessibilityRole="button"
+                      accessibilityLabel={`Choisir la sévérité ${REPORT_SEVERITY_LABELS[sev]}`}
                     >
                       <Text
                         className={`text-xs font-bold ${
@@ -261,6 +269,8 @@ export default function NewReportScreen() {
                 <TouchableOpacity
                   onPress={() => setImageUri(null)}
                   className="absolute top-2 right-2 w-8 h-8 bg-black/50 rounded-full items-center justify-center"
+                  accessibilityRole="button"
+                  accessibilityLabel="Retirer la photo"
                 >
                   <X size={14} color="white" />
                 </TouchableOpacity>
@@ -270,6 +280,8 @@ export default function NewReportScreen() {
                 <TouchableOpacity
                   onPress={handleTakePhoto}
                   className="flex-1 bg-white border border-border rounded-2xl py-5 items-center gap-2"
+                  accessibilityRole="button"
+                  accessibilityLabel="Prendre une photo"
                 >
                   <Camera size={20} color={colors.textSecondary} />
                   <Text className="text-xs text-slate">Prendre une photo</Text>
@@ -277,6 +289,8 @@ export default function NewReportScreen() {
                 <TouchableOpacity
                   onPress={handlePickImage}
                   className="flex-1 bg-white border border-border rounded-2xl py-5 items-center gap-2"
+                  accessibilityRole="button"
+                  accessibilityLabel="Choisir une photo depuis la galerie"
                 >
                   <Camera size={20} color={colors.textSecondary} />
                   <Text className="text-xs text-slate">Choisir depuis la galerie</Text>

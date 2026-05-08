@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity,
-  SafeAreaView, Image, Dimensions,
+  SafeAreaView, Image, Dimensions, Share,
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
@@ -24,9 +24,10 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { useProfile, useIsAuthenticated } from '@/stores/authStore';
 import { formatDistance, formatDuration } from '@/lib/geo/geoUtils';
 import { TRAIL_TYPE_LABELS, POI_TYPE_LABELS } from '@/lib/constants/labels';
-import { colors } from '@/config/colors';
+import { colors, gradients } from '@/config/colors';
 import type { AdviceInput } from '@/features/advice/adviceEngine';
-import type { PointOfInterest, Trail } from '@/types/database';
+import type { PointOfInterest, Report, Trail, TrailReview } from '@/types/database';
+import type { RideAdvice, WeatherData } from '@/types/weather';
 
 // ============================================================
 // Écran Détail d'une piste
@@ -35,6 +36,9 @@ import type { PointOfInterest, Trail } from '@/types/database';
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const TABS = ['Infos', 'Météo', 'Signalements', 'Avis'] as const;
 type Tab = typeof TABS[number];
+type TrailReviewWithProfile = TrailReview & {
+  profiles?: { full_name: string | null; avatar_url: string | null } | null;
+};
 
 export default function TrailDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -127,6 +131,13 @@ export default function TrailDetailScreen() {
     favoriteQuery.refetch();
   }
 
+  async function handleShareTrail() {
+    if (!trail) return;
+    await Share.share({
+      message: `Découvre la piste ${trail.name} sur BikeTrip (${formatDistance(trail.distance_km ?? 0)}).`,
+    });
+  }
+
   if (trailQuery.isLoading) {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: '#F4F8F5' }}>
@@ -161,7 +172,7 @@ export default function TrailDetailScreen() {
             />
           ) : (
             <LinearGradient
-              colors={['#16A34A', '#0EA5E9']}
+              colors={gradients.primary}
               style={{ width: '100%', height: '100%' }}
             />
           )}
@@ -176,6 +187,8 @@ export default function TrailDetailScreen() {
               <TouchableOpacity
                 onPress={() => router.back()}
                 className="w-10 h-10 bg-black/30 rounded-full items-center justify-center"
+                accessibilityRole="button"
+                accessibilityLabel="Revenir à l'écran précédent"
               >
                 <ArrowLeft size={20} color="white" />
               </TouchableOpacity>
@@ -183,6 +196,8 @@ export default function TrailDetailScreen() {
                 <TouchableOpacity
                   onPress={toggleFavorite}
                   className="w-10 h-10 bg-black/30 rounded-full items-center justify-center"
+                  accessibilityRole="button"
+                  accessibilityLabel={isFav ? 'Retirer cette piste des favoris' : 'Ajouter cette piste aux favoris'}
                 >
                   <Heart
                     size={20}
@@ -191,7 +206,10 @@ export default function TrailDetailScreen() {
                   />
                 </TouchableOpacity>
                 <TouchableOpacity
+                  onPress={handleShareTrail}
                   className="w-10 h-10 bg-black/30 rounded-full items-center justify-center"
+                  accessibilityRole="button"
+                  accessibilityLabel="Partager cette piste"
                 >
                   <Share2 size={20} color="white" />
                 </TouchableOpacity>
@@ -245,7 +263,7 @@ export default function TrailDetailScreen() {
             <>
               <View className="w-px bg-border mx-2 self-stretch" />
               <QuickStat
-                icon={<Star size={16} color="#F59E0B" fill="#F59E0B" />}
+                icon={<Star size={16} color={colors.warning} fill={colors.warning} />}
                 value={trail.average_rating.toFixed(1)}
                 label={`${reviews.length} avis`}
               />
@@ -259,6 +277,8 @@ export default function TrailDetailScreen() {
             onPress={() => router.push({ pathname: '/ride/start', params: { trailId: trail.id } })}
             className="bg-primary-600 rounded-2xl py-4 flex-row items-center justify-center gap-3"
             activeOpacity={0.85}
+            accessibilityRole="button"
+            accessibilityLabel="Démarrer cette piste"
           >
             <Play size={20} color="white" fill="white" />
             <Text className="text-white font-bold text-base">Démarrer cette piste</Text>
@@ -279,6 +299,8 @@ export default function TrailDetailScreen() {
               className={`rounded-full px-5 py-2.5 ${
                 activeTab === tab ? 'bg-primary-600' : 'bg-white border border-border'
               }`}
+              accessibilityRole="button"
+              accessibilityLabel={`Afficher l'onglet ${tab}`}
             >
               <Text
                 className={`text-sm font-semibold ${
@@ -394,7 +416,9 @@ function InfoTab({ trail, pois }: { trail: Trail; pois: PointOfInterest[] }) {
 
 // ─── Onglet Météo ─────────────────────────────────────────────
 
-function MeteoTab({ weather, isLoading, advice }: { weather: any; isLoading: boolean; advice: any }) {
+function MeteoTab({
+  weather, isLoading, advice,
+}: { weather?: WeatherData | null; isLoading: boolean; advice: RideAdvice | null }) {
   if (isLoading) return <LoadingState message="Chargement de la météo..." />;
   if (!weather) return <EmptyState title="Météo indisponible" description="Impossible de récupérer les données météo." />;
 
@@ -408,7 +432,7 @@ function MeteoTab({ weather, isLoading, advice }: { weather: any; isLoading: boo
 
 // ─── Onglet Signalements ──────────────────────────────────────
 
-function ReportsTab({ reports, isLoading, trailId }: { reports: any[]; isLoading: boolean; trailId: string }) {
+function ReportsTab({ reports, isLoading, trailId }: { reports: Report[]; isLoading: boolean; trailId: string }) {
   if (isLoading) return <LoadingState message="Chargement des signalements..." />;
 
   return (
@@ -416,6 +440,8 @@ function ReportsTab({ reports, isLoading, trailId }: { reports: any[]; isLoading
       <TouchableOpacity
         onPress={() => router.push({ pathname: '/reports/new', params: { trailId } })}
         className="flex-row items-center gap-2 border border-primary-600 rounded-2xl py-3 px-4 justify-center"
+        accessibilityRole="button"
+        accessibilityLabel="Signaler un problème sur cette piste"
       >
         <AlertTriangle size={16} color={colors.primary.DEFAULT} />
         <Text className="text-primary-600 font-semibold text-sm">Signaler un problème</Text>
@@ -432,7 +458,6 @@ function ReportsTab({ reports, isLoading, trailId }: { reports: any[]; isLoading
           <ReportCard
             key={report.id}
             report={report}
-            onPress={() => router.push(`/reports/${report.id}`)}
           />
         ))
       )}
@@ -443,10 +468,10 @@ function ReportsTab({ reports, isLoading, trailId }: { reports: any[]; isLoading
 // ─── Onglet Avis ─────────────────────────────────────────────
 
 function ReviewsTab({ reviews, isLoading, trailId, trail }: {
-  reviews: any[];
+  reviews: TrailReviewWithProfile[];
   isLoading: boolean;
   trailId: string;
-  trail: any;
+  trail: Trail;
 }) {
   const isAuthenticated = useIsAuthenticated();
 
@@ -457,6 +482,8 @@ function ReviewsTab({ reviews, isLoading, trailId, trail }: {
       <TouchableOpacity
         onPress={() => isAuthenticated ? router.push({ pathname: '/trails/review', params: { trailId } }) : router.push('/auth/login')}
         className="flex-row items-center gap-2 border border-primary-600 rounded-2xl py-3 px-4 justify-center"
+        accessibilityRole="button"
+        accessibilityLabel="Écrire un avis sur cette piste"
       >
         <Star size={16} color={colors.primary.DEFAULT} />
         <Text className="text-primary-600 font-semibold text-sm">Écrire un avis</Text>
@@ -472,12 +499,12 @@ function ReviewsTab({ reviews, isLoading, trailId, trail }: {
                 <Star
                   key={s}
                   size={14}
-                  color="#F59E0B"
-                  fill={s <= Math.round(trail.average_rating) ? '#F59E0B' : 'transparent'}
+                  color={colors.warning}
+                  fill={s <= Math.round(trail.average_rating) ? colors.warning : 'transparent'}
                 />
               ))}
             </View>
-            <Text className="text-xs text-slate mt-1">{trail.review_count} avis</Text>
+            <Text className="text-xs text-slate mt-1">{reviews.length} avis</Text>
           </View>
         </View>
       )}
@@ -492,15 +519,15 @@ function ReviewsTab({ reviews, isLoading, trailId, trail }: {
           <View key={review.id} className="bg-white rounded-2xl p-4 border border-border gap-2">
             <View className="flex-row items-center justify-between">
               <Text className="text-carbon font-semibold text-sm">
-                {review.profile?.full_name ?? 'Anonyme'}
+                {review.profiles?.full_name ?? 'Anonyme'}
               </Text>
               <View className="flex-row gap-0.5">
                 {[1, 2, 3, 4, 5].map((s) => (
                   <Star
                     key={s}
                     size={12}
-                    color="#F59E0B"
-                    fill={s <= review.rating ? '#F59E0B' : 'transparent'}
+                    color={colors.warning}
+                    fill={s <= review.rating ? colors.warning : 'transparent'}
                   />
                 ))}
               </View>

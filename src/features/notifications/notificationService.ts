@@ -41,8 +41,9 @@ export async function registerForPushNotifications(): Promise<ServiceResult<stri
     }
 
     return { data: token, error: null };
-  } catch (err: any) {
-    return { data: null, error: err.message ?? 'Erreur lors de l\'enregistrement' };
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'Erreur lors de l\'enregistrement';
+    return { data: null, error: message };
   }
 }
 

@@ -12,7 +12,7 @@ import { AppInput } from '@/components/ui/AppInput';
 import { AppButton } from '@/components/ui/AppButton';
 import { signIn } from '@/features/auth/authService';
 import { signInSchema, type SignInFormData } from '@/lib/validations/auth';
-import { colors } from '@/config/colors';
+import { colors, gradients } from '@/config/colors';
 
 // ============================================================
 // Écran Connexion
@@ -52,7 +52,7 @@ export default function LoginScreen() {
         >
           {/* Header gradient */}
           <LinearGradient
-            colors={['#16A34A', '#0EA5E9']}
+            colors={gradients.primary}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
             className="pt-12 pb-16 px-6 items-center gap-3"
@@ -116,6 +116,8 @@ export default function LoginScreen() {
             <TouchableOpacity
               onPress={() => router.push('/auth/forgot-password')}
               className="self-end"
+              accessibilityRole="button"
+              accessibilityLabel="Réinitialiser le mot de passe"
             >
               <Text className="text-primary-600 text-sm font-medium">
                 Mot de passe oublié ?
@@ -133,7 +135,11 @@ export default function LoginScreen() {
 
             <View className="flex-row justify-center items-center gap-2 mt-2">
               <Text className="text-slate text-sm">Pas encore de compte ?</Text>
-              <TouchableOpacity onPress={() => router.push('/auth/register')}>
+              <TouchableOpacity
+                onPress={() => router.push('/auth/register')}
+                accessibilityRole="button"
+                accessibilityLabel="Créer un compte"
+              >
                 <Text className="text-primary-600 text-sm font-bold">
                   Créer un compte
                 </Text>

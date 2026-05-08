@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity,
-  SafeAreaView, TextInput, KeyboardAvoidingView, Platform,
+  SafeAreaView, TextInput, KeyboardAvoidingView, Platform, Share,
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -50,6 +50,13 @@ export default function RideSummaryScreen() {
 
   const ride = rideQuery.data?.data;
 
+  const handleShareRide = async () => {
+    if (!ride) return;
+    await Share.share({
+      message: `J'ai terminé une sortie BikeTrip de ${formatDistance(ride.distance_km ?? 0)} en ${formatDuration(ride.duration_seconds ?? 0)}.`,
+    });
+  };
+
   if (rideQuery.isLoading) {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: '#F4F8F5' }}>
@@ -66,6 +73,8 @@ export default function RideSummaryScreen() {
           <TouchableOpacity
             onPress={() => router.replace('/(tabs)/home')}
             className="bg-primary-600 rounded-2xl py-4 px-8"
+            accessibilityRole="button"
+            accessibilityLabel="Retourner à l'accueil"
           >
             <Text className="text-white font-bold">Retour à l'accueil</Text>
           </TouchableOpacity>
@@ -92,7 +101,7 @@ export default function RideSummaryScreen() {
         >
           {/* Header félicitations */}
           <LinearGradient
-            colors={['#16A34A', '#15803D']}
+            colors={[colors.primary.DEFAULT, colors.primary[700]]}
             className="px-6 py-10 items-center gap-4"
           >
             <View className="w-20 h-20 bg-white/20 rounded-full items-center justify-center">
@@ -149,7 +158,7 @@ export default function RideSummaryScreen() {
               <TextInput
                 className="text-carbon text-sm leading-6 min-h-20"
                 placeholder="Comment s'est passée ta sortie ? Conditions de piste, sensations..."
-                placeholderTextColor="#94A3B8"
+                placeholderTextColor={colors.placeholder}
                 value={notes}
                 onChangeText={setNotes}
                 multiline
@@ -160,6 +169,8 @@ export default function RideSummaryScreen() {
                   onPress={() => saveNotesMutation.mutate()}
                   className="bg-primary-600 rounded-xl py-2.5 items-center"
                   disabled={saveNotesMutation.isPending}
+                  accessibilityRole="button"
+                  accessibilityLabel="Sauvegarder les notes de sortie"
                 >
                   <Text className="text-white font-semibold text-sm">
                     {saveNotesMutation.isPending ? 'Sauvegarde...' : 'Sauvegarder les notes'}
@@ -177,7 +188,10 @@ export default function RideSummaryScreen() {
             {/* Actions */}
             <View className="gap-3">
               <TouchableOpacity
+                onPress={handleShareRide}
                 className="bg-white border border-border rounded-2xl py-3.5 flex-row items-center justify-center gap-2"
+                accessibilityRole="button"
+                accessibilityLabel="Partager ma sortie"
               >
                 <Share2 size={16} color={colors.carbon} />
                 <Text className="text-carbon font-semibold text-sm">Partager ma sortie</Text>
@@ -186,6 +200,8 @@ export default function RideSummaryScreen() {
               <TouchableOpacity
                 onPress={() => router.replace('/(tabs)/home')}
                 className="bg-primary-600 rounded-2xl py-4 flex-row items-center justify-center gap-2"
+                accessibilityRole="button"
+                accessibilityLabel="Retourner à l'accueil"
               >
                 <Home size={16} color="white" />
                 <Text className="text-white font-bold">Retour à l'accueil</Text>

@@ -44,6 +44,8 @@ export default function FavoritesScreen() {
         <TouchableOpacity
           onPress={() => router.back()}
           className="w-10 h-10 rounded-full items-center justify-center"
+          accessibilityRole="button"
+          accessibilityLabel="Revenir à l'écran précédent"
         >
           <ArrowLeft size={20} color={colors.carbon} />
         </TouchableOpacity>
@@ -90,6 +92,8 @@ export default function FavoritesScreen() {
                 onPress={() => removeMutation.mutate(item.trails.id)}
                 className="absolute top-3 right-3 w-9 h-9 bg-white rounded-full items-center justify-center shadow-card"
                 disabled={removeMutation.isPending}
+                accessibilityRole="button"
+                accessibilityLabel="Retirer cette piste des favoris"
               >
                 <Heart size={16} color={colors.accent.DEFAULT} fill={colors.accent.DEFAULT} />
               </TouchableOpacity>

@@ -56,6 +56,8 @@ export default function CollectionDetailScreen() {
         <TouchableOpacity
           onPress={() => router.back()}
           className="w-10 h-10 rounded-full items-center justify-center"
+          accessibilityRole="button"
+          accessibilityLabel="Revenir à l'écran précédent"
         >
           <ArrowLeft size={20} color={colors.carbon} />
         </TouchableOpacity>
@@ -72,6 +74,8 @@ export default function CollectionDetailScreen() {
         <TouchableOpacity
           onPress={handleDelete}
           className="w-10 h-10 rounded-full items-center justify-center bg-danger/10"
+          accessibilityRole="button"
+          accessibilityLabel="Supprimer cette collection"
         >
           <Trash2 size={16} color={colors.danger} />
         </TouchableOpacity>

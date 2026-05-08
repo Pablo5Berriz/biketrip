@@ -9,7 +9,7 @@ import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import {
   Activity, Clock, TrendingUp, MapPin,
-  Calendar, ChevronRight, Play,
+  Calendar, Play,
 } from 'lucide-react-native';
 import { getRideHistory, getRideStats } from '@/features/rides/rideService';
 import { LoadingState } from '@/components/ui/LoadingState';
@@ -17,6 +17,7 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { useIsAuthenticated, useUser } from '@/stores/authStore';
 import { formatDistance, formatDuration } from '@/lib/geo/geoUtils';
 import { colors } from '@/config/colors';
+import type { PlannedRide, Ride, Trail } from '@/types/database';
 
 // ============================================================
 // Écran Sorties — Historique & statistiques
@@ -24,6 +25,17 @@ import { colors } from '@/config/colors';
 
 const TABS = ['Historique', 'Statistiques'] as const;
 type Tab = typeof TABS[number];
+type RideHistoryItem = Ride & { trails?: Pick<Trail, 'name' | 'difficulty'> | null };
+type RideStats = {
+  totalRides: number;
+  totalDistanceKm: number;
+  totalDurationSeconds: number;
+  totalElevationGainM: number;
+  maxSpeedKmh?: number;
+  averageSpeedKmh?: number;
+  plannedRides?: PlannedRideItem[];
+};
+type PlannedRideItem = PlannedRide & { trails?: Pick<Trail, 'name'> | null };
 
 export default function RidesScreen() {
   const [activeTab, setActiveTab] = useState<Tab>('Historique');
@@ -45,7 +57,7 @@ export default function RidesScreen() {
   });
 
   const rides = ridesQuery.data?.data ?? [];
-  const stats = statsQuery.data?.data;
+  const stats = statsQuery.data?.data ?? undefined;
 
   if (!isAuthenticated) {
     return (
@@ -72,6 +84,8 @@ export default function RidesScreen() {
           <TouchableOpacity
             onPress={() => router.push('/ride/start')}
             className="flex-row items-center gap-2 bg-primary-600 rounded-full px-4 py-2"
+            accessibilityRole="button"
+            accessibilityLabel="Démarrer une sortie"
           >
             <Play size={14} color="white" fill="white" />
             <Text className="text-white text-sm font-bold">Démarrer</Text>
@@ -87,6 +101,8 @@ export default function RidesScreen() {
               className={`flex-1 py-2.5 rounded-lg items-center ${
                 activeTab === tab ? 'bg-primary-600' : ''
               }`}
+              accessibilityRole="button"
+              accessibilityLabel={`Afficher l'onglet ${tab}`}
             >
               <Text
                 className={`text-sm font-semibold ${
@@ -119,7 +135,7 @@ export default function RidesScreen() {
 function HistoryTab({
   rides, isLoading, onRefresh, isRefreshing,
 }: {
-  rides: any[];
+  rides: RideHistoryItem[];
   isLoading: boolean;
   onRefresh: () => void;
   isRefreshing: boolean;
@@ -160,21 +176,23 @@ function HistoryTab({
   );
 }
 
-function RideHistoryCard({ ride }: { ride: any }) {
+function RideHistoryCard({ ride }: { ride: RideHistoryItem }) {
   const date = format(new Date(ride.started_at), 'EEEE d MMMM yyyy', { locale: fr });
   const time = format(new Date(ride.started_at), 'HH:mm', { locale: fr });
 
   return (
     <TouchableOpacity
-      onPress={() => router.push(`/ride/${ride.id}`)}
+      onPress={() => router.push({ pathname: '/ride/summary', params: { rideId: ride.id } })}
       className="bg-white rounded-2xl p-4 border border-border"
       activeOpacity={0.8}
+      accessibilityRole="button"
+      accessibilityLabel="Ouvrir le résumé de cette sortie"
     >
       <View className="flex-row items-start justify-between mb-3">
         <View className="flex-1">
           <Text className="text-sm text-slate capitalize">{date}</Text>
           <Text className="text-base font-bold text-carbon mt-0.5" numberOfLines={1}>
-            {ride.trail?.name ?? 'Sortie libre'}
+            {ride.trails?.name ?? 'Sortie libre'}
           </Text>
         </View>
         <View className="flex-row items-center gap-1">
@@ -199,10 +217,10 @@ function RideHistoryCard({ ride }: { ride: any }) {
           value={`${Math.round(ride.elevation_gain_m ?? 0)} m`}
           label="Dénivelé"
         />
-        {ride.avg_speed_kmh != null && (
+        {ride.average_speed_kmh != null && (
           <StatMini
             icon={<MapPin size={14} color={colors.accent.DEFAULT} />}
-            value={`${ride.avg_speed_kmh.toFixed(1)} km/h`}
+            value={`${ride.average_speed_kmh.toFixed(1)} km/h`}
             label="Moy."
           />
         )}
@@ -229,7 +247,7 @@ function StatMini({ icon, value, label }: { icon: React.ReactNode; value: string
 
 // ─── Onglet Statistiques ──────────────────────────────────────
 
-function StatsTab({ stats, isLoading }: { stats: any; isLoading: boolean }) {
+function StatsTab({ stats, isLoading }: { stats?: RideStats; isLoading: boolean }) {
   if (isLoading) return <LoadingState message="Calcul des statistiques..." fullScreen />;
 
   if (!stats) {
@@ -277,13 +295,13 @@ function StatsTab({ stats, isLoading }: { stats: any; isLoading: boolean }) {
       <View className="flex-row gap-3 mb-4">
         <StatCard
           label="Vitesse max"
-          value={`${(stats.max_speed_kmh ?? 0).toFixed(1)} km/h`}
+          value={`${(stats.maxSpeedKmh ?? 0).toFixed(1)} km/h`}
           icon={<Activity size={20} color={colors.accent.DEFAULT} />}
           color={colors.accent.DEFAULT}
         />
         <StatCard
           label="Vitesse moy."
-          value={`${(stats.avg_speed_kmh ?? 0).toFixed(1)} km/h`}
+          value={`${(stats.averageSpeedKmh ?? 0).toFixed(1)} km/h`}
           icon={<Activity size={20} color={colors.primary.DEFAULT} />}
           color={colors.primary.DEFAULT}
         />
@@ -293,16 +311,9 @@ function StatsTab({ stats, isLoading }: { stats: any; isLoading: boolean }) {
       <View className="mt-2">
         <View className="flex-row items-center justify-between mb-3">
           <Text className="text-base font-bold text-carbon">Sorties planifiées</Text>
-          <TouchableOpacity
-            onPress={() => router.push('/ride/plan')}
-            className="flex-row items-center gap-1"
-          >
-            <Text className="text-primary-600 text-sm font-medium">Planifier</Text>
-            <ChevronRight size={16} color={colors.primary.DEFAULT} />
-          </TouchableOpacity>
         </View>
 
-        {(stats.planned_rides ?? []).length === 0 ? (
+        {(stats.plannedRides ?? []).length === 0 ? (
           <View className="bg-white rounded-2xl p-5 border border-border items-center gap-3">
             <Calendar size={28} color={colors.textSecondary} />
             <Text className="text-slate text-sm text-center">
@@ -310,9 +321,9 @@ function StatsTab({ stats, isLoading }: { stats: any; isLoading: boolean }) {
             </Text>
           </View>
         ) : (
-          (stats.planned_rides ?? []).map((p: any) => (
+          (stats.plannedRides ?? []).map((p) => (
             <View key={p.id} className="bg-white rounded-2xl p-4 border border-border mb-3">
-              <Text className="text-sm font-bold text-carbon">{p.trail?.name ?? 'Piste inconnue'}</Text>
+              <Text className="text-sm font-bold text-carbon">{p.trails?.name ?? 'Piste inconnue'}</Text>
               <Text className="text-xs text-slate mt-1">
                 {format(new Date(`${p.planned_date}T${p.planned_time ?? '00:00'}`), 'EEEE d MMMM à HH:mm', { locale: fr })}
               </Text>

@@ -33,7 +33,7 @@ export default function ActiveRideScreen() {
     resetRide,
   } = useRideStore();
 
-  const { location } = useLocation();
+  const { location, hasPermission, error: locationError } = useLocation();
 
   // Piste sélectionnée (optionnelle)
   const trailQuery = useQuery({
@@ -275,6 +275,8 @@ export default function ActiveRideScreen() {
           <TouchableOpacity
             onPress={() => router.push('/reports/new')}
             className="w-12 h-12 bg-warning/10 rounded-full items-center justify-center"
+            accessibilityRole="button"
+            accessibilityLabel="Signaler un problème pendant la sortie"
           >
             <AlertTriangle size={20} color={colors.warning} />
           </TouchableOpacity>
@@ -284,6 +286,8 @@ export default function ActiveRideScreen() {
             onPress={() => isPaused ? resumeMutation.mutate() : pauseMutation.mutate()}
             className="w-16 h-16 bg-primary-600 rounded-full items-center justify-center"
             disabled={!activeRide}
+            accessibilityRole="button"
+            accessibilityLabel={isPaused ? 'Reprendre la sortie' : 'Mettre la sortie en pause'}
           >
             {isPaused ? (
               <Play size={28} color="white" fill="white" />
@@ -296,6 +300,8 @@ export default function ActiveRideScreen() {
           <TouchableOpacity
             onPress={handleFinish}
             className="w-12 h-12 bg-danger/10 rounded-full items-center justify-center"
+            accessibilityRole="button"
+            accessibilityLabel="Terminer la sortie"
           >
             <StopCircle size={20} color={colors.danger} />
           </TouchableOpacity>
@@ -318,9 +324,23 @@ export default function ActiveRideScreen() {
           position: 'absolute', top: 60, right: 16,
         }}
         className="w-12 h-12 bg-white rounded-full items-center justify-center shadow-float"
+        accessibilityRole="button"
+        accessibilityLabel="Recentrer la carte sur ma position"
       >
         <Navigation size={20} color={colors.primary.DEFAULT} />
       </TouchableOpacity>
+
+      {(hasPermission === false || locationError) && (
+        <View
+          style={{ position: 'absolute', top: 116, left: 16, right: 16 }}
+          className="bg-white rounded-2xl border border-warning/40 p-4 shadow-float"
+        >
+          <Text className="text-carbon font-semibold text-sm">Localisation indisponible</Text>
+          <Text className="text-slate text-xs mt-1">
+            Active la permission de localisation pour enregistrer précisément ta sortie.
+          </Text>
+        </View>
+      )}
     </View>
   );
 }
