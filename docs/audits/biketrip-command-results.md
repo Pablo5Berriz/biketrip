@@ -221,3 +221,69 @@ Aucune de ces corrections n'a touché un fichier du dépôt BikeTrip ; elles con
 | `git diff --stat` (périmètre autorisé) | ✅ Exécutée | 6 fichiers applicatifs + `command-results.md`, aucune migration, aucun fichier hors périmètre |
 
 **Anomalie d'environnement rencontrée et documentée pour transparence** : à plusieurs reprises pendant ce lot, le terminal bash de vérification a lu une version tronquée d'un fichier pourtant correctement et intégralement écrit par l'outil d'édition (confirmé par relecture directe du fichier réel). Chaque occurrence a été détectée par comparaison systématique de la taille/contenu observés côté terminal avec le contenu réellement écrit, puis corrigée par réécriture explicite côté terminal avant de considérer un résultat de test comme valide. Aucun résultat « PASS » n'a été retenu dans ce rapport tant que la correspondance entre le fichier exécuté et le code réellement livré n'était pas vérifiée.
+
+---
+
+## 12. Lot BIKETRIP-P0-RIDE-002 — Plafonnement de la vitesse capteur (2026-07-14)
+
+### 12.1 Point de départ
+
+- HEAD au début du lot : `7b0c2a9d52daf9d00d8d5c9c13f71abfe17bab9d` (`fix(rides): calculate and persist tracking statistics`).
+- Vérification d'intégrité du commit précédent : les 9 fichiers du commit ont été comparés octet à octet entre `git show HEAD:<fichier> | wc -c` et le contenu attendu. Aucune troncature détectée. Tailles observées :
+  - `app/ride/active.tsx` = 14918 o
+  - `app/tabs/rides.tsx` = 12755 o
+  - `docs/audits/biketrip-command-results.md` = 18073 o
+  - `docs/audits/biketrip-lot-P0-RIDE-001-report.md` = 23184 o
+  - `src/features/rides/rideService.ts` = 8307 o
+  - `src/hooks/useLocation.ts` = 4179 o
+  - `src/lib/geo/geoUtils.test.ts` = 11284 o
+  - `src/lib/geo/geoUtils.ts` = 9716 o
+  - `src/stores/rideStore.ts` = 3420 o
+  - Aucun fichier à 0 octet ni terminaison syntaxique incomplète.
+
+### 12.2 Anomalie d'environnement — désynchronisation du montage bash
+
+Confirmée à nouveau sur ce lot : après chaque modification via l'outil d'édition de fichiers, la vue montée en bash (utilisée pour exécuter lint/typecheck/jest) ne reflétait pas immédiatement le contenu réellement écrit sur le fichier côté Windows (taille et contenu de fin de fichier identiques à la version précédente, non modifiée). Reproduit sur `src/lib/geo/geoUtils.ts` et `src/lib/geo/geoUtils.test.ts`.
+
+**Correctif appliqué systématiquement** : relecture du fichier via l'outil de lecture (source de vérité), puis réécriture complète du fichier côté terminal (`rm -f` puis `cat > fichier <<'DELIM' ... DELIM`), puis vérification `wc -l -c` + `tail -c` + `xxd | tail` avant toute exécution de commande de validation. Aucun résultat de test n'a été considéré valide avant cette vérification.
+
+**Effet de bord détecté et corrigé** : la première réécriture par heredoc du fichier `src/lib/geo/geoUtils.ts` a involontairement dépouillé les accents français des commentaires existants (encodage perdu lors de la reconstruction manuelle du contenu), produisant un diff de 124 lignes au lieu des ~29 réellement nécessaires. Corrigé en reconstruisant le fichier programmatiquement (script Python, encodage UTF-8 explicite) à partir du contenu exact du commit `7b0c2a9` (`git show HEAD:...`), en n'appliquant que les modifications strictement requises par la correction. Diff final ramené à +24/-5 lignes.
+
+### 12.3 Anomalie constatée hors périmètre — `supabase/seed.sql`
+
+`git status` révèle que `supabase/seed.sql` est marqué modifié dans l'arbre de travail, alors que ce fichier n'a jamais été ouvert ni édité pendant ce lot. Analyse :
+- `git diff --stat` : 380 insertions / 380 suppressions (réécriture apparente de la totalité du fichier).
+- `git show HEAD:supabase/seed.sql | tr -d '\r' | md5sum` et `cat supabase/seed.sql | tr -d '\r' | md5sum` produisent le **même hash** (`ab7c875689349aaaca6ebadfc22a5c64`).
+- `file supabase/seed.sql` révèle des terminaisons `CRLF`, alors que la version committée utilise `LF`.
+
+**Conclusion** : dérive de fins de ligne (CRLF vs LF) préexistante à ce lot, contenu strictement identique une fois normalisé. Non causée par ce lot, non corrigée (fichier explicitement hors périmètre autorisé BIKETRIP-P0-RIDE-002). Signalée pour action séparée du PM — probablement un outil Windows (éditeur, Git config `core.autocrlf`) ayant réécrit les fins de ligne lors d'une session antérieure.
+
+### 12.4 Correctif appliqué
+
+Dans `src/lib/geo/geoUtils.ts`, fonction `ingestTrackPoint` : la vitesse rapportée par le capteur (`raw.speedKmh`) est désormais bornée par la même constante `GPS_MAX_PLAUSIBLE_SPEED_KMH` (80 km/h) que la vitesse implicite. Une vitesse capteur invalide, négative, non finie (`NaN`/`Infinity`) ou supérieure au seuil est traitée comme indisponible (`null`) et le calcul retombe sur la vitesse implicite (déplacement/temps) si un point précédent existe, ou reste `null` sinon — y compris sur le tout premier point de la sortie, où aucune vérification par déplacement n'est possible.
+
+Le diff final sur le périmètre autorisé est volontairement minimal : reconstruction à partir du contenu exact du commit `7b0c2a9` (accents et formatage d'origine préservés), puis application ciblée de la correction (+24/-5 lignes sur `geoUtils.ts`, +106/-0 lignes sur `geoUtils.test.ts` pour les 7 nouveaux cas de test).
+
+### 12.5 Résultats de validation
+
+```
+npx jest --silent
+PASS src/lib/geo/geoUtils.test.ts
+PASS src/lib/constants/labels.test.ts
+Test Suites: 2 passed, 2 total
+Tests:       30 passed, 30 total
+```
+
+```
+npx eslint . --ext .ts,.tsx   → exit 0, aucune erreur
+npx tsc --noEmit              → exit 0, aucune erreur
+```
+
+`git diff --stat` sur le périmètre autorisé uniquement :
+```
+src/lib/geo/geoUtils.test.ts | 106 +++++++++++++++++++++++++++++++++++++++++++
+src/lib/geo/geoUtils.ts      |  29 ++++++++++--
+2 files changed, 130 insertions(+), 5 deletions(-)
+```
+
+Vérification anti-troncature finale (`xxd | tail`) : les deux fichiers se terminent proprement par une accolade fermante syntaxiquement valide, aucune coupure en milieu de mot.

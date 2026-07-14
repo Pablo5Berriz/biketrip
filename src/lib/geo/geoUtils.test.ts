@@ -283,3 +283,109 @@ describe('ingestTrackPoint', () => {
     }
   });
 });
+
+// ============================================================
+// Tests unitaires - BIKETRIP-P0-RIDE-002
+// Plafonnement de la vitesse rapportee par le capteur
+// (raw.speedKmh) par GPS_MAX_PLAUSIBLE_SPEED_KMH, y compris sur
+// le tout premier point de la sortie (aucun deplacement disponible
+// pour la valider par comparaison).
+// ============================================================
+describe('ingestTrackPoint - vitesse capteur bornee (BIKETRIP-P0-RIDE-002)', () => {
+  it('rejette une vitesse capteur aberrante sur le tout premier point de la sortie', () => {
+    const acc0 = createRideAccumulator();
+    const result = ingestTrackPoint(
+      acc0,
+      point({ latitude: 0, longitude: 0, timestamp: 0, speedKmh: 120 }),
+    );
+
+    // Le point reste geometriquement valide (coordonnees plausibles) : seule
+    // la vitesse rapportee par le capteur est jugee aberrante et ignoree.
+    expect(result.accepted).toBe(true);
+    expect(result.currentSpeedKmh).toBeNull();
+    expect(result.accumulator.maxSpeedKmh).toBe(0);
+  });
+
+  it('ignore une vitesse capteur aberrante et retombe sur la vitesse implicite quand le deplacement est plausible', () => {
+    const acc0 = createRideAccumulator();
+    const first = ingestTrackPoint(acc0, point({ latitude: 0, longitude: 0, timestamp: 0 }));
+    const second = ingestTrackPoint(
+      first.accumulator,
+      point({ latitude: 0.001, longitude: 0, timestamp: 10000, speedKmh: 120 }),
+    );
+
+    expect(second.accepted).toBe(true);
+    expect(second.currentSpeedKmh).not.toBeNull();
+    // Identique a la vitesse de repli distance/temps du test existant
+    // ("calcule la vitesse instantanee par repli distance temps"), car la
+    // vitesse capteur aberrante (120) doit etre totalement ignoree.
+    expect(second.currentSpeedKmh!).toBeCloseTo(40.03, 1);
+    expect(second.accumulator.maxSpeedKmh).toBeCloseTo(40.03, 1);
+  });
+
+  it('accepte une vitesse capteur exactement egale au seuil plausible', () => {
+    const acc0 = createRideAccumulator();
+    const result = ingestTrackPoint(
+      acc0,
+      point({ latitude: 0, longitude: 0, timestamp: 0, speedKmh: GPS_MAX_PLAUSIBLE_SPEED_KMH }),
+    );
+
+    expect(result.accepted).toBe(true);
+    expect(result.currentSpeedKmh).toBe(GPS_MAX_PLAUSIBLE_SPEED_KMH);
+    expect(result.accumulator.maxSpeedKmh).toBe(GPS_MAX_PLAUSIBLE_SPEED_KMH);
+  });
+
+  it('rejette une vitesse capteur legerement superieure au seuil plausible', () => {
+    const acc0 = createRideAccumulator();
+    const result = ingestTrackPoint(
+      acc0,
+      point({ latitude: 0, longitude: 0, timestamp: 0, speedKmh: GPS_MAX_PLAUSIBLE_SPEED_KMH + 0.1 }),
+    );
+
+    expect(result.accepted).toBe(true);
+    expect(result.currentSpeedKmh).toBeNull();
+    expect(result.accumulator.maxSpeedKmh).toBe(0);
+  });
+
+  it('rejette une vitesse capteur infinie', () => {
+    const acc0 = createRideAccumulator();
+    const result = ingestTrackPoint(
+      acc0,
+      point({ latitude: 0, longitude: 0, timestamp: 0, speedKmh: Infinity }),
+    );
+
+    expect(result.accepted).toBe(true);
+    expect(result.currentSpeedKmh).toBeNull();
+    expect(result.accumulator.maxSpeedKmh).toBe(0);
+  });
+
+  it('rejette une vitesse capteur NaN', () => {
+    const acc0 = createRideAccumulator();
+    const result = ingestTrackPoint(
+      acc0,
+      point({ latitude: 0, longitude: 0, timestamp: 0, speedKmh: NaN }),
+    );
+
+    expect(result.accepted).toBe(true);
+    expect(result.currentSpeedKmh).toBeNull();
+    expect(result.accumulator.maxSpeedKmh).toBe(0);
+  });
+
+  it('ne laisse jamais maxSpeedKmh depasser le seuil plausible sur une sequence mixte capteur/implicite', () => {
+    const sequence: RideTrackPoint[] = [
+      point({ latitude: 0, longitude: 0, timestamp: 0, speedKmh: 500 }),
+      point({ latitude: 0.0001, longitude: 0, timestamp: 5000, speedKmh: GPS_MAX_PLAUSIBLE_SPEED_KMH - 1 }),
+      point({ latitude: 0.0002, longitude: 0, timestamp: 10000, speedKmh: -999 }),
+      point({ latitude: 0.0003, longitude: 0, timestamp: 15000, speedKmh: Infinity }),
+      point({ latitude: 0.0004, longitude: 0, timestamp: 20000, speedKmh: NaN }),
+    ];
+
+    let acc = createRideAccumulator();
+    for (const p of sequence) {
+      const result = ingestTrackPoint(acc, p);
+      acc = result.accumulator;
+      expect(acc.maxSpeedKmh).toBeLessThanOrEqual(GPS_MAX_PLAUSIBLE_SPEED_KMH);
+      expect(Number.isFinite(acc.maxSpeedKmh)).toBe(true);
+    }
+  });
+});

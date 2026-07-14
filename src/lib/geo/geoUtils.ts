@@ -133,7 +133,9 @@ export const GPS_MIN_ACCURACY_M = 30;
  * km/h. Un déplacement impliquant une vitesse supérieure entre deux
  * points GPS consécutifs est considéré comme un artefact de
  * positionnement (saut de position) et rejeté, plutôt que comptabilisé
- * comme un record de vitesse.
+ * comme un record de vitesse. Seuil unique réutilisé à la fois pour la
+ * vitesse implicite (déplacement/temps) et pour la vitesse rapportée par
+ * le capteur (BIKETRIP-P0-RIDE-002) afin d'éviter deux règles concurrentes.
  */
 export const GPS_MAX_PLAUSIBLE_SPEED_KMH = 80;
 
@@ -201,9 +203,14 @@ export interface IngestResult {
  * (exigence explicite de la directive BIKETRIP-P0-RIDE-001, étape 4).
  *
  * La vitesse instantanée privilégie la valeur rapportée par le capteur
- * (`raw.speedKmh`, dérivée de `coords.speed`) lorsqu'elle est valide et
- * positive ; sinon elle retombe sur un calcul distance/temps entre les
- * deux derniers points valides.
+ * (`raw.speedKmh`, dérivée de `coords.speed`) lorsqu'elle est valide,
+ * positive et ne dépasse pas {@link GPS_MAX_PLAUSIBLE_SPEED_KMH} (même
+ * seuil que pour la vitesse implicite — une vitesse capteur aberrante ne
+ * peut jamais contaminer `currentSpeedKmh`/`maxSpeedKmh`, y compris sur le
+ * premier point de la sortie) ; sinon elle retombe sur un calcul
+ * distance/temps entre les deux derniers points valides, ou sur `null`
+ * si aucun point précédent n'est disponible pour ce calcul
+ * (BIKETRIP-P0-RIDE-002).
  *
  * Le dénivelé compare l'altitude du point courant à celle du dernier
  * point valide : une variation absolue inférieure à
@@ -225,7 +232,19 @@ export function ingestTrackPoint(
     return { accumulator: acc, accepted: false, currentSpeedKmh: null };
   }
 
-  const deviceSpeedKmh = raw.speedKmh != null && Number.isFinite(raw.speedKmh) && raw.speedKmh >= 0
+  // BIKETRIP-P0-RIDE-002 : la vitesse rapportée par le capteur (raw.speedKmh,
+  // dérivée de coords.speed) doit être bornée par la même constante que la
+  // vitesse implicite (GPS_MAX_PLAUSIBLE_SPEED_KMH) — une vitesse capteur
+  // aberrante (bruit matériel, saut GPS, valeur mal normalisée en amont,
+  // etc.) ne doit jamais pouvoir contaminer currentSpeedKmh/maxSpeedKmh, y
+  // compris sur le tout premier point de la sortie (aucun déplacement
+  // disponible pour la valider par comparaison). Une seule constante de
+  // seuil est utilisée pour les deux vitesses (capteur et implicite) afin
+  // d'éviter deux règles concurrentes.
+  const deviceSpeedKmh = raw.speedKmh != null
+    && Number.isFinite(raw.speedKmh)
+    && raw.speedKmh >= 0
+    && raw.speedKmh <= GPS_MAX_PLAUSIBLE_SPEED_KMH
     ? raw.speedKmh
     : null;
 
