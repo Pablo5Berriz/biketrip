@@ -287,3 +287,37 @@ src/lib/geo/geoUtils.ts      |  29 ++++++++++--
 ```
 
 Vérification anti-troncature finale (`xxd | tail`) : les deux fichiers se terminent proprement par une accolade fermante syntaxiquement valide, aucune coupure en milieu de mot.
+
+---
+
+## 13. Lot BIKETRIP-P1-CI-001 — CI minimale GitHub Actions (2026-07-14)
+
+### 13.1 Point de départ
+
+HEAD au début du lot : `cff2c72e64766327597bdce1453cb153a08d6e69` (rapport BIKETRIP-P0-RIDE-003, statut BLOCKED). Node `v22.22.3`, npm `10.9.8`, `lockfileVersion: 3`. Aucun `.github/workflows/` préexistant, aucun `.nvmrc`/`.node-version` préexistant.
+
+### 13.2 Incident majeur — corruption locale de `node_modules`
+
+En tentant de vérifier la reproductibilité de `npm ci` (étape 3 de la directive), plusieurs exécutions successives de `npm ci`/`npm install` ont été interrompues par la limite d'exécution de 45 secondes par commande de cet environnement (le dépôt compte environ 835 paquets — l'installation complète dépasse systématiquement ce budget). Chaque interruption a laissé `node_modules` dans un état partiel, et les tentatives de nettoyage (`rm -rf node_modules`) ont elles-mêmes échoué de façon répétée avec des erreurs `ENOTEMPTY`/« Directory not empty » sur environ 223 répertoires de transfert temporaires npm (motif `.<paquet>-<hash>`), y compris après relecture confirmant que leur contenu était vide ou déjà partiellement supprimé.
+
+**Cause probable** : contention sur le dossier monté (verrouillage transitoire de fichiers côté hôte Windows, cohérent avec l'anomalie de désynchronisation déjà documentée dans les lots précédents, mais ici sur un volume d'écriture bien plus important que les fichiers texte habituels).
+
+**Impact réel** :
+- `node_modules/` est actuellement dans un état incomplet dans cet environnement (paquets `eslint` et `typescript` notamment manquants, causant un repli erroné de `npx` vers des paquets homonymes non liés sur le registre public).
+- **Aucun impact sur les fichiers suivis par Git** : `node_modules/` est explicitement dans `.gitignore` (confirmé), `git status` ne l'a jamais fait apparaître, `package.json` et `package-lock.json` sont restés strictement inchangés (`git diff --stat` vide) pendant tout l'incident.
+- Aucune régression de code : aucun fichier applicatif n'a été touché par ce lot.
+
+**Action recommandée à l'utilisateur** : exécuter `npm ci` (ou `rm -rf node_modules && npm install`) localement, hors de cet environnement sandbox, pour restaurer un `node_modules` sain — cette opération est anodine et sans rapport avec l'état du dépôt Git.
+
+Conséquence directe sur ce lot : le lint, le typecheck et Jest n'ont pas pu être ré-exécutés localement après la création du workflow CI, faute d'outillage disponible dans `node_modules`. Les derniers résultats locaux fiables (avant l'incident, sur ce même HEAD) restent ceux du lot BIKETRIP-P0-RIDE-003 : lint 0 erreur, typecheck 0 erreur, Jest 30/30. Aucun fichier de code n'a changé depuis. La validation locale complète de ce lot CI reste donc partielle ; l'exécution réelle de la pipeline GitHub Actions (hors périmètre de ce lot, aucun push autorisé) sera la première validation de bout en bout.
+
+### 13.3 Travail livré
+
+- `.github/workflows/ci.yml` (nouveau) : job unique `quality`, déclencheurs `pull_request` et `push` sur `master`/`main`, permissions `contents: read`, politique de concurrence avec annulation des exécutions obsolètes, `actions/setup-node@v4` avec cache npm et version Node lue depuis `.nvmrc`, étapes `npm ci` → lint → type-check → test.
+- `.nvmrc` (nouveau) : `22`, correspondant à la version Node réellement vérifiée dans cet environnement (`v22.22.3`) et actuellement en Maintenance LTS (Node 24 étant l'Active LTS courante ainsi que confirmé par recherche web du jour) — choix justifié dans le rapport de lot dédié.
+- Validation YAML : syntaxe vérifiée via un parseur YAML (PyYAML) — valide. Note : PyYAML (YAML 1.1) interprète la clé `on:` non quotée comme le booléen `True`, artefact connu et sans incidence sur le parseur spécifique de GitHub Actions, qui traite `on:` comme mot-clé réservé quel que soit le parseur générique utilisé localement.
+- `package.json`/`package-lock.json` : non modifiés (aucun script manquant pour ce lot).
+
+### 13.4 Périmètre
+
+Fichiers modifiés : `.github/workflows/ci.yml`, `.nvmrc`, `docs/audits/biketrip-command-results.md`, nouveau rapport de lot. Aucun fichier `app/`, `src/`, `supabase/` touché. `supabase/seed.sql` reste hors commit (dérive CRLF préexistante, non liée à ce lot).
