@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useRef } from 'react';
 import {
   View, Text, TouchableOpacity, Alert,
 } from 'react-native';
+import * as Location from 'expo-location';
 import MapView, { Polyline, Marker, PROVIDER_DEFAULT } from 'react-native-maps';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useMutation, useQuery } from '@tanstack/react-query';
@@ -12,8 +13,18 @@ import { useLocation } from '@/hooks/useLocation';
 import { startRide, pauseRide, resumeRide, finishRide, saveRidePoint } from '@/features/rides/rideService';
 import { getTrailById } from '@/features/trails/trailService';
 import { RideTrackingPanel } from '@/components/rides/StatTile';
-import { formatDuration } from '@/lib/geo/geoUtils';
+import { formatDuration, computeAverageSpeed } from '@/lib/geo/geoUtils';
 import { colors } from '@/config/colors';
+
+// Cadence et précision du suivi GPS pendant une sortie active. Plus
+// resserrées que les valeurs par défaut du hook (interval=5000ms,
+// Balanced) utilisées par les écrans d'affichage simple (carte,
+// accueil) : le calcul de vitesse/distance d'une sortie à vélo profite
+// d'une précision et d'une fréquence de relevé plus élevées. Reste en
+// mode FOREGROUND_TRACKING uniquement (watchPositionAsync, pas de
+// TaskManager ni de service arrière-plan).
+const RIDE_TRACKING_INTERVAL_MS = 3000;
+const RIDE_TRACKING_ACCURACY = Location.Accuracy.High;
 
 // ============================================================
 // Écran Sortie active — GPS + suivi en temps réel
@@ -27,13 +38,21 @@ export default function ActiveRideScreen() {
 
   const {
     activeRide, isPaused, elapsedSeconds, distanceKm,
-    ridePoints, currentSpeed,
+    ridePoints, currentSpeedKmh, maxSpeedKmh, elevationGainM, elevationLossM,
     setActiveRide, setIsPaused, setElapsedSeconds,
-    setCurrentPosition, setCurrentSpeed, addRidePoint,
+    ingestPoint,
     resetRide,
   } = useRideStore();
 
-  const { location, hasPermission, error: locationError } = useLocation();
+  // tracking:true — sans cette option le hook ne fait qu'une capture de
+  // position unique (getCurrentPositionAsync) et ne s'abonne jamais à
+  // watchPositionAsync : c'est la cause racine de distanceKm figé à 0
+  // constatée dans l'audit. Mode FOREGROUND_TRACKING uniquement.
+  const { location, trackPoint, hasPermission, error: locationError } = useLocation({
+    tracking: true,
+    interval: RIDE_TRACKING_INTERVAL_MS,
+    accuracy: RIDE_TRACKING_ACCURACY,
+  });
 
   // Piste sélectionnée (optionnelle)
   const trailQuery = useQuery({
@@ -54,12 +73,22 @@ export default function ActiveRideScreen() {
     }
   }, []);
 
+  // NOTE (correctif RIDE-001) : la version précédente lisait `elapsedSeconds`
+  // capturé par fermeture au moment de la création de l'intervalle et le
+  // réutilisait à chaque tick (`setElapsedSeconds(elapsedSeconds + 1)`),
+  // ce qui figeait le compteur au lieu de l'incrémenter (bug de closure
+  // React classique). setElapsedSeconds accepte désormais un updater
+  // fonctionnel `(prev) => prev + 1`, lu sur l'état réel au moment de
+  // l'exécution — plus de dépendance à `elapsedSeconds`/`isPaused` ici,
+  // ils ne servent plus qu'à démarrer/arrêter l'intervalle (déjà fait
+  // explicitement par pause/reprise, donc le garde-fou interne devient
+  // inutile et est retiré pour éviter la confusion).
   const startTimer = useCallback(() => {
     stopTimer();
     timerRef.current = setInterval(() => {
-      if (!isPaused) setElapsedSeconds(elapsedSeconds + 1);
+      setElapsedSeconds((prev) => prev + 1);
     }, 1000);
-  }, [elapsedSeconds, isPaused, setElapsedSeconds, stopTimer]);
+  }, [setElapsedSeconds, stopTimer]);
 
   const startMutation = useMutation({
     mutationFn: () =>
@@ -80,36 +109,41 @@ export default function ActiveRideScreen() {
     return () => stopTimer();
   }, [activeRide, startMutation, stopTimer, user?.id]);
 
-  // Suivi de position
+  // Suivi de position — intègre chaque nouveau relevé GPS enrichi dans
+  // l'accumulateur de sortie (distance/vitesse/dénivelé, voir
+  // ingestTrackPoint dans geoUtils.ts). Aucun point n'est traité pendant
+  // une pause (ni calcul, ni sauvegarde), conformément à la directive.
   useEffect(() => {
-    if (!location || !activeRide || isPaused) return;
+    if (!trackPoint || !activeRide || isPaused) return;
 
-    setCurrentPosition(location);
-    setCurrentSpeed(0);
+    const accepted = ingestPoint(trackPoint);
+    // Un point rejeté (précision insuffisante, saut de position aberrant,
+    // horodatage incohérent) n'augmente jamais la distance ni la vitesse
+    // maximale — voir geoUtils.ingestTrackPoint. On ne recentre pas non
+    // plus la carte sur un point jugé non fiable.
+    if (!accepted) return;
 
-    // Sauvegarde du point (toutes les 5 secondes environ via le hook useLocation)
     if (activeRide.id) {
       void saveRidePoint(activeRide.id, {
-        latitude: location.latitude,
-        longitude: location.longitude,
-        altitude_m: null,
-        speed_kmh: null,
+        latitude: trackPoint.latitude,
+        longitude: trackPoint.longitude,
+        altitude_m: trackPoint.altitudeM,
+        speed_kmh: trackPoint.speedKmh,
       }).then((result) => {
         if (!result.success) {
           console.warn('[BikeTrip] Position non sauvegardée', result.error);
         }
       });
     }
-    addRidePoint(location);
 
     // Recentre la carte
     mapRef.current?.animateToRegion({
-      latitude: location.latitude,
-      longitude: location.longitude,
+      latitude: trackPoint.latitude,
+      longitude: trackPoint.longitude,
       latitudeDelta: 0.005,
       longitudeDelta: 0.005,
     }, 300);
-  }, [activeRide, addRidePoint, isPaused, location, setCurrentPosition, setCurrentSpeed]);
+  }, [activeRide, ingestPoint, isPaused, trackPoint]);
 
   // ─── Pause / Reprise ──────────────────────────────────────
 
@@ -131,12 +165,26 @@ export default function ActiveRideScreen() {
 
   // ─── Terminer ─────────────────────────────────────────────
 
+  // Empêche une double finalisation (double-tap sur "Terminer" avant que
+  // la mutation ne soit marquée pending) : la source de vérité des
+  // agrégats persistés doit rester le même relevé que celui affiché.
+  const hasFinishedRef = useRef(false);
+
   const finishMutation = useMutation({
-    mutationFn: () =>
-      finishRide(activeRide!.id, user!.id, {
-        distance_km: distanceKm,
+    mutationFn: () => {
+      // Arrondis appliqués uniquement à la persistance (pas pendant
+      // l'accumulation, pour ne pas composer d'erreurs d'arrondi).
+      const roundedDistanceKm = Math.round(distanceKm * 100) / 100;
+      const averageSpeedKmh = computeAverageSpeed(distanceKm, elapsedSeconds);
+      return finishRide(activeRide!.id, user!.id, {
+        distance_km: roundedDistanceKm,
         duration_seconds: elapsedSeconds,
-      }),
+        average_speed_kmh: averageSpeedKmh,
+        max_speed_kmh: Math.round(maxSpeedKmh * 10) / 10,
+        elevation_gain_m: Math.round(elevationGainM),
+        elevation_loss_m: Math.round(elevationLossM),
+      });
+    },
     onSuccess: (result) => {
       stopTimer();
       resetRide();
@@ -145,9 +193,14 @@ export default function ActiveRideScreen() {
         params: { rideId: result.data?.id ?? '' },
       });
     },
+    onError: () => {
+      // Permet une nouvelle tentative si la sauvegarde réseau échoue.
+      hasFinishedRef.current = false;
+    },
   });
 
   function handleFinish() {
+    if (hasFinishedRef.current || finishMutation.isPending) return;
     if (elapsedSeconds < 30) {
       Alert.alert(
         'Terminer la sortie ?',
@@ -157,7 +210,10 @@ export default function ActiveRideScreen() {
           {
             text: 'Terminer',
             style: 'destructive',
-            onPress: () => finishMutation.mutate(),
+            onPress: () => {
+              hasFinishedRef.current = true;
+              finishMutation.mutate();
+            },
           },
         ],
       );
@@ -171,7 +227,10 @@ export default function ActiveRideScreen() {
         {
           text: 'Terminer',
           style: 'destructive',
-          onPress: () => finishMutation.mutate(),
+          onPress: () => {
+            hasFinishedRef.current = true;
+            finishMutation.mutate();
+          },
         },
       ],
     );
@@ -192,6 +251,11 @@ export default function ActiveRideScreen() {
       longitudeDelta: 0.005,
     }
     : { latitude: 46.81, longitude: -71.21, latitudeDelta: 0.1, longitudeDelta: 0.1 };
+
+  // Vitesse moyenne en mouvement = distance valide / durée active
+  // (elapsedSeconds n'incrémente déjà pas pendant une pause, cf. startTimer
+  // ci-dessus). Calcul déplacé hors JSX (fonction pure, testée).
+  const averageSpeedKmh = computeAverageSpeed(distanceKm, elapsedSeconds);
 
   return (
     <View style={{ flex: 1 }}>
@@ -263,10 +327,8 @@ export default function ActiveRideScreen() {
         <RideTrackingPanel
           distanceKm={distanceKm}
           durationSeconds={elapsedSeconds}
-          speedKmh={currentSpeed * 3.6}
-          averageSpeedKmh={
-            elapsedSeconds > 0 ? (distanceKm / (elapsedSeconds / 3600)) : 0
-          }
+          speedKmh={currentSpeedKmh}
+          averageSpeedKmh={averageSpeedKmh}
         />
 
         {/* Boutons de contrôle */}
@@ -300,6 +362,7 @@ export default function ActiveRideScreen() {
           <TouchableOpacity
             onPress={handleFinish}
             className="w-12 h-12 bg-danger/10 rounded-full items-center justify-center"
+            disabled={finishMutation.isPending}
             accessibilityRole="button"
             accessibilityLabel="Terminer la sortie"
           >

@@ -31,8 +31,14 @@ type RideStats = {
   totalDistanceKm: number;
   totalDurationSeconds: number;
   totalElevationGainM: number;
-  maxSpeedKmh?: number;
-  averageSpeedKmh?: number;
+  // BIKETRIP-P0-RIDE-001 : getRideStats() calcule désormais réellement
+  // ces deux champs (non-optionnels côté service) ; le "?? 0" ci-dessous
+  // reste une garde d'affichage, pas un masquage d'un champ absent.
+  maxSpeedKmh: number;
+  averageSpeedKmh: number;
+  // Non calculé par getRideStats() dans ce lot (planification de sortie
+  // hors périmètre BIKETRIP-P0-RIDE-001) — StatsTab gère déjà son
+  // absence via (stats.plannedRides ?? []).
   plannedRides?: PlannedRideItem[];
 };
 type PlannedRideItem = PlannedRide & { trails?: Pick<Trail, 'name'> | null };

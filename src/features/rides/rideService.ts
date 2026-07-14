@@ -1,6 +1,7 @@
 import { supabase } from '@/lib/supabase/client';
 import type { Ride, RidePoint, ServiceResult } from '@/types/database';
 import { rideNotesSchema, type RideNotesFormData } from '@/lib/validations/ride';
+import { computeAverageSpeed } from '@/lib/geo/geoUtils';
 
 // ============================================================
 // Service de suivi des sorties vélo
@@ -235,34 +236,55 @@ export async function getRideHistory(
 }
 
 /**
- * Résumé statistique global d'un utilisateur
+ * Résumé statistique global d'un utilisateur.
+ *
+ * BIKETRIP-P0-RIDE-001 : averageSpeedKmh et maxSpeedKmh sont désormais
+ * réellement calculés (auparavant absents de la réponse alors que
+ * StatsTab les consommait déjà via un fallback silencieux à 0, cf.
+ * audit — module "Statistiques agregees (getRideStats)").
+ * maxSpeedKmh = maximum des vitesses max individuelles des sorties.
+ * averageSpeedKmh = moyenne pondérée par distance/durée active sur
+ * l'ensemble des sorties (distance totale / durée active totale),
+ * cohérente avec le calcul par sortie (computeAverageSpeed).
  */
 export async function getRideStats(userId: string): Promise<ServiceResult<{
   totalRides: number;
   totalDistanceKm: number;
   totalDurationSeconds: number;
   totalElevationGainM: number;
+  averageSpeedKmh: number;
+  maxSpeedKmh: number;
 }>> {
   try {
     const { data, error } = await supabase
       .from('rides')
-      .select('distance_km, duration_seconds, elevation_gain_m')
+      .select('distance_km, duration_seconds, elevation_gain_m, max_speed_kmh')
       .eq('user_id', userId)
       .eq('status', 'COMPLETED');
 
     if (error) return { success: false, error: 'Impossible de charger les statistiques.' };
 
-    const stats = (data ?? []).reduce(
+    const aggregates = (data ?? []).reduce(
       (acc, ride) => ({
         totalRides: acc.totalRides + 1,
         totalDistanceKm: acc.totalDistanceKm + (ride.distance_km ?? 0),
         totalDurationSeconds: acc.totalDurationSeconds + (ride.duration_seconds ?? 0),
         totalElevationGainM: acc.totalElevationGainM + (ride.elevation_gain_m ?? 0),
+        maxSpeedKmh: Math.max(acc.maxSpeedKmh, ride.max_speed_kmh ?? 0),
       }),
-      { totalRides: 0, totalDistanceKm: 0, totalDurationSeconds: 0, totalElevationGainM: 0 },
+      {
+        totalRides: 0, totalDistanceKm: 0, totalDurationSeconds: 0,
+        totalElevationGainM: 0, maxSpeedKmh: 0,
+      },
     );
 
-    return { success: true, data: stats };
+    return {
+      success: true,
+      data: {
+        ...aggregates,
+        averageSpeedKmh: computeAverageSpeed(aggregates.totalDistanceKm, aggregates.totalDurationSeconds),
+      },
+    };
   } catch {
     return { success: false, error: 'Erreur réseau.' };
   }

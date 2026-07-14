@@ -88,6 +88,198 @@ export function computeAverageSpeed(distanceKm: number, durationSeconds: number)
   return Math.round((distanceKm / hours) * 10) / 10;
 }
 
+// ============================================================
+// Suivi de sortie — types, seuils et calcul incrémental
+// (BIKETRIP-P0-RIDE-001)
+// ============================================================
+
+/**
+ * Point de suivi GPS enrichi capturé pendant une sortie active.
+ * Unités explicites dans les noms de champs (règle du lot RIDE-001).
+ */
+export interface RideTrackPoint {
+  latitude: number;
+  longitude: number;
+  /** Horodatage en millisecondes depuis epoch (Date.now() / loc.timestamp Expo). */
+  timestamp: number;
+  altitudeM: number | null;
+  speedKmh: number | null;
+  accuracyM?: number | null;
+}
+
+/**
+ * État accumulé d'une sortie, mis à jour de façon incrémentale à chaque
+ * nouveau point accepté. Évite de recalculer l'intégralité du tracé à
+ * chaque rendu (cf. directive BIKETRIP-P0-RIDE-001, étape 5).
+ */
+export interface RideAccumulator {
+  distanceKm: number;
+  maxSpeedKmh: number;
+  elevationGainM: number;
+  elevationLossM: number;
+  lastValidPoint: RideTrackPoint | null;
+}
+
+/**
+ * Précision GPS minimale acceptée, en mètres (rayon d'incertitude
+ * horizontale rapporté par le capteur). Un point moins précis que ce
+ * seuil est jugé trop peu fiable pour contribuer à la distance, à la
+ * vitesse ou au dénivelé d'une sortie à vélo.
+ */
+export const GPS_MIN_ACCURACY_M = 30;
+
+/**
+ * Vitesse maximale physiquement plausible pour une sortie à vélo, en
+ * km/h. Un déplacement impliquant une vitesse supérieure entre deux
+ * points GPS consécutifs est considéré comme un artefact de
+ * positionnement (saut de position) et rejeté, plutôt que comptabilisé
+ * comme un record de vitesse.
+ */
+export const GPS_MAX_PLAUSIBLE_SPEED_KMH = 80;
+
+/**
+ * Seuil de bruit altimétrique, en mètres. Les capteurs de localisation
+ * grand public ont une précision verticale de l'ordre de plusieurs
+ * mètres ; une variation d'altitude inférieure à ce seuil entre deux
+ * points consécutifs est ignorée pour éviter de cumuler du dénivelé
+ * fictif provoqué par le bruit du capteur plutôt que par un vrai relief.
+ */
+export const ELEVATION_NOISE_THRESHOLD_M = 3;
+
+/**
+ * Accumulateur initial (aucun point encore intégré).
+ */
+export function createRideAccumulator(): RideAccumulator {
+  return {
+    distanceKm: 0,
+    maxSpeedKmh: 0,
+    elevationGainM: 0,
+    elevationLossM: 0,
+    lastValidPoint: null,
+  };
+}
+
+/**
+ * Convertit une vitesse de mètres par seconde (unité native
+ * `coords.speed` d'Expo Location) vers kilomètres par heure.
+ */
+export function mpsToKmh(speedMps: number): number {
+  return speedMps * 3.6;
+}
+
+function isPlausibleCoordinate(latitude: number, longitude: number): boolean {
+  return (
+    Number.isFinite(latitude) && Number.isFinite(longitude) &&
+    latitude >= -90 && latitude <= 90 &&
+    longitude >= -180 && longitude <= 180
+  );
+}
+
+export interface IngestResult {
+  accumulator: RideAccumulator;
+  accepted: boolean;
+  /** Vitesse instantanée retenue pour ce point (km/h), ou null si indisponible. */
+  currentSpeedKmh: number | null;
+}
+
+/**
+ * Intègre un nouveau point GPS brut dans l'accumulateur d'une sortie.
+ *
+ * Fonction pure et déterministe : aucun état React/Zustand, aucun accès
+ * réseau, aucune dépendance à un GPS réel — entièrement testable avec
+ * une séquence de points fixe.
+ *
+ * Le point est rejeté (accepted=false, accumulateur inchangé) lorsque :
+ *  - les coordonnées sont invalides (hors bornes ou non finies) ;
+ *  - la précision GPS dépasse {@link GPS_MIN_ACCURACY_M} ;
+ *  - l'horodatage est manquant, non fini, égal ou antérieur au point
+ *    précédent (protection anti double-comptage / anti régression) ;
+ *  - le déplacement implique une vitesse supérieure à
+ *    {@link GPS_MAX_PLAUSIBLE_SPEED_KMH} (saut de position aberrant).
+ *
+ * Un point rejeté n'augmente jamais la distance ni la vitesse maximale
+ * (exigence explicite de la directive BIKETRIP-P0-RIDE-001, étape 4).
+ *
+ * La vitesse instantanée privilégie la valeur rapportée par le capteur
+ * (`raw.speedKmh`, dérivée de `coords.speed`) lorsqu'elle est valide et
+ * positive ; sinon elle retombe sur un calcul distance/temps entre les
+ * deux derniers points valides.
+ *
+ * Le dénivelé compare l'altitude du point courant à celle du dernier
+ * point valide : une variation absolue inférieure à
+ * {@link ELEVATION_NOISE_THRESHOLD_M} est ignorée (bruit altimétrique).
+ * Aucun dénivelé n'est inventé lorsque l'altitude est indisponible sur
+ * l'un des deux points.
+ */
+export function ingestTrackPoint(
+  acc: RideAccumulator,
+  raw: RideTrackPoint,
+): IngestResult {
+  if (!isPlausibleCoordinate(raw.latitude, raw.longitude)) {
+    return { accumulator: acc, accepted: false, currentSpeedKmh: null };
+  }
+  if (raw.accuracyM != null && raw.accuracyM > GPS_MIN_ACCURACY_M) {
+    return { accumulator: acc, accepted: false, currentSpeedKmh: null };
+  }
+  if (!Number.isFinite(raw.timestamp)) {
+    return { accumulator: acc, accepted: false, currentSpeedKmh: null };
+  }
+
+  const deviceSpeedKmh = raw.speedKmh != null && Number.isFinite(raw.speedKmh) && raw.speedKmh >= 0
+    ? raw.speedKmh
+    : null;
+
+  // Premier point valide de la sortie : rien à comparer, aucune distance
+  // ni vitesse par déplacement calculable.
+  if (!acc.lastValidPoint) {
+    const currentSpeedKmh = deviceSpeedKmh;
+    const maxSpeedKmh = currentSpeedKmh != null
+      ? Math.max(acc.maxSpeedKmh, currentSpeedKmh)
+      : acc.maxSpeedKmh;
+    return {
+      accumulator: { ...acc, maxSpeedKmh, lastValidPoint: raw },
+      accepted: true,
+      currentSpeedKmh,
+    };
+  }
+
+  const deltaTimeS = (raw.timestamp - acc.lastValidPoint.timestamp) / 1000;
+  if (!Number.isFinite(deltaTimeS) || deltaTimeS <= 0) {
+    return { accumulator: acc, accepted: false, currentSpeedKmh: null };
+  }
+
+  const segmentDistanceKm = haversineDistance(acc.lastValidPoint, raw);
+  const impliedSpeedKmh = segmentDistanceKm / (deltaTimeS / 3600);
+
+  if (!Number.isFinite(impliedSpeedKmh) || impliedSpeedKmh > GPS_MAX_PLAUSIBLE_SPEED_KMH) {
+    return { accumulator: acc, accepted: false, currentSpeedKmh: null };
+  }
+
+  const currentSpeedKmh = deviceSpeedKmh ?? impliedSpeedKmh;
+
+  let elevationGainM = acc.elevationGainM;
+  let elevationLossM = acc.elevationLossM;
+  if (acc.lastValidPoint.altitudeM != null && raw.altitudeM != null) {
+    const altitudeDeltaM = raw.altitudeM - acc.lastValidPoint.altitudeM;
+    if (Math.abs(altitudeDeltaM) >= ELEVATION_NOISE_THRESHOLD_M) {
+      if (altitudeDeltaM > 0) elevationGainM += altitudeDeltaM;
+      else elevationLossM += Math.abs(altitudeDeltaM);
+    }
+  }
+
+  return {
+    accumulator: {
+      distanceKm: acc.distanceKm + segmentDistanceKm,
+      maxSpeedKmh: Math.max(acc.maxSpeedKmh, currentSpeedKmh),
+      elevationGainM,
+      elevationLossM,
+      lastValidPoint: raw,
+    },
+    accepted: true,
+    currentSpeedKmh,
+  };
+}
+
 /**
  * Bounding box d'un set de points (pour centrer la carte)
  */

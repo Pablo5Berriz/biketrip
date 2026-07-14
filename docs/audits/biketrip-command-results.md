@@ -168,3 +168,56 @@ Toutes exécutées via `grep -rn`/`grep -rln` en lecture seule, aucune n'a modif
 | `search_path` dans `supabase/migrations/*.sql` | 0 résultat | Confirme qu'aucune des 4 fonctions ne verrouille `search_path` |
 | `git diff --ignore-all-space --stat supabase/seed.sql` | Aucune sortie | Confirme que la seule modification non commitée est un changement de fin de ligne (CRLF/LF), sans impact fonctionnel |
 | `git ls-files \| grep '^\.env$'` | 0 résultat | Confirme qu'aucun `.env` n'est suivi par Git |
+
+---
+
+## 10. Lot BIKETRIP-P0-SEC-001 — Durcissement `search_path` (2026-07-14, suite à l'audit)
+
+Contexte : ce lot fait suite à la revue PM de l'audit ci-dessus, qui a demandé de traiter en priorité P0 le durcissement des 4 fonctions `SECURITY DEFINER` avant toute réparation fonctionnelle. Contrairement à la phase d'audit initiale, ce lot **a pu exécuter réellement** les migrations et les tests RLS contre une base PostgreSQL 16 + PostGIS 3.5 locale, provisionnée en espace utilisateur (sans root, sans Docker) via `micromamba`/conda-forge, `initdb` et `pg_ctl`, faute d'accès à Docker Desktop/Supabase CLI dans cet environnement sandbox.
+
+**Limite méthodologique explicite** : cette base locale n'est pas une instance Supabase réelle. Les schémas `auth` (table `auth.users`, fonctions `auth.uid()`/`auth.role()`) et `storage` (`storage.buckets`, `storage.objects`, `storage.foldername()`) que Supabase fournit nativement ont dû être reconstitués manuellement à l'identique de leur comportement documenté publiquement, uniquement pour permettre le rejeu des migrations du projet. Ces fichiers de reconstitution (`/tmp/auth_stub.sql`, `/tmp/storage_stub.sql`) sont des artefacts de test **hors du dépôt BikeTrip**, non commités, non livrés.
+
+| Commande / étape | Statut | Résultat |
+|---|---|---|
+| Provisionnement PostgreSQL 16.10 + PostGIS 3.5.0 local (`micromamba create -n pgtest -c conda-forge postgresql=16 postgis`) | ✅ Exécutée | Installation réussie en espace utilisateur, aucun accès root requis |
+| `initdb` + `pg_ctl start` sur `/tmp/pgdata` | ✅ Exécutée | Cluster local opérationnel sur socket Unix `/tmp/.s.PGSQL.5544` |
+| Rejeu de `supabase/migrations/001_enums.sql` → `006_storage.sql` (non modifiées) sur base vide | ✅ Exécutée | Toutes appliquées sans erreur après ajout des stubs `auth`/`storage` |
+| Application de `supabase/migrations/007_security_definer_search_path_hardening.sql` (nouvelle) | ✅ Exécutée | Appliquée sans erreur à la suite des 6 précédentes |
+| Requête d'inspection `pg_proc` (fournie par le PM) | ✅ Exécutée | Les 4 fonctions affichent `prosecdef = t` et `proconfig = {"search_path=\"\""}`  |
+| `supabase/tests/rls_security.sql` (intégral, non modifié) | ✅ Exécutée | **17/17 assertions `PASS`, 0 `FAIL`**, transaction terminée par `ROLLBACK` (aucune donnée de test conservée) |
+| Validation directe `SELECT expire_old_reports();` et `SELECT current_user_role();` hors contexte RLS | ✅ Exécutée | Les deux fonctions s'exécutent sans erreur ; `current_user_role()` retourne correctement le fallback `USER` en l'absence de profil correspondant |
+| `npx eslint . --ext .ts,.tsx` | ✅ Exécutée | 0 erreur, 0 avertissement (inchangé — aucun fichier TS/TSX modifié par ce lot) |
+| `npx tsc --noEmit` | ✅ Exécutée | 0 erreur (inchangé) |
+| `npx jest --ci` | ✅ Exécutée | 1 suite, 1 test, 100 % pass (inchangé) |
+| `git diff --check` | ✅ Exécutée | 2 avertissements de fin de ligne (CRLF) sur `supabase/seed.sql` uniquement — anomalie **préexistante à ce lot**, documentée dans l'audit initial (§3), non introduite ni aggravée ici |
+| `git diff --stat` (fichiers suivis) | ✅ Exécutée | Seul `supabase/seed.sql` apparaît modifié (380/380, inchangé depuis l'audit) — aucune migration historique (001 à 006) altérée |
+
+**Erreurs rencontrées et corrigées pendant l'exécution (documentées pour transparence)** :
+- Premier essai de script avec `set -e` : arrêt silencieux sans affichage du journal — corrigé en retirant `set -e` et en inspectant le fichier journal directement.
+- `CREATE ROLE anon/authenticated/service_role` échouait au 2e essai (les rôles Postgres sont globaux au cluster, pas à la base de données, donc persistent après un `dropdb`/`createdb`) — corrigé en rendant la création idempotente via `DO $$ ... IF NOT EXISTS ... $$`.
+- `006_storage.sql` échouait initialement car `storage.buckets` n'existait pas — corrigé en ajoutant le stub `storage` avant application de cette migration.
+
+Aucune de ces corrections n'a touché un fichier du dépôt BikeTrip ; elles concernent uniquement l'infrastructure de test locale temporaire.
+
+---
+
+## 11. Lot BIKETRIP-P0-RIDE-001 — Statistiques réelles de suivi de sortie (2026-07-14)
+
+**Correctif de scope préalable** : en préparant ce lot, une divergence a été détectée entre le fichier réel (`docs/audits/biketrip-command-results.md`, source de vérité de l'outil d'édition) et l'état observé par le terminal bash de vérification lors du lot précédent — la section 10 ci-dessus, bien que réellement écrite dans le fichier, n'était pas visible depuis le terminal au moment du commit `65c2aeb`. Ce nouveau commit republie le fichier complet (sections 1 à 10 incluses) : aucune perte de contenu, aucune réécriture d'historique Git (pas d'amend/rebase), simple republication normale dans un nouveau commit.
+
+| Commande / étape | Statut | Résultat |
+|---|---|---|
+| `git status --short` / `git rev-parse HEAD` / `git show --stat --oneline HEAD` | ✅ Exécutée | HEAD confirmé à `65c2aeb` avant modification |
+| Cartographie du flux GPS existant (`useLocation.ts`, `rideStore.ts`, `active.tsx`, `rideService.ts`) | ✅ Exécutée | Voir §6 du rapport de lot dédié |
+| Création `RideTrackPoint`/`RideAccumulator`/`ingestTrackPoint`/seuils nommés dans `geoUtils.ts` | ✅ Exécutée | Fonction pure, sans dépendance React/réseau/GPS réel |
+| Câblage `useLocation.ts` (capture altitude/vitesse/précision) + `rideStore.ts` (accumulateur incrémental) + `active.tsx` (tracking:true, minuteur corrigé, finishRide enrichi) | ✅ Exécutée | Voir diff scoping ci-dessous |
+| `getRideStats()` calcule désormais `averageSpeedKmh`/`maxSpeedKmh` | ✅ Exécutée | `src/features/rides/rideService.ts` |
+| `npx jest src/lib/geo/geoUtils.test.ts --ci` (23 tests, 15 cas obligatoires + compléments) | ✅ Exécutée | **23/23 PASS**, 0 FAIL |
+| Scénario manuel simulé (séquence de points fixe, avec pause) via `useRideStore` réel | ✅ Exécutée | distance 0→0.633 km, pause vérifiée sans accumulation, dénivelé +11 m/-6 m, bruit <3 m ignoré — script temporaire supprimé après exécution, non livré |
+| `npx eslint . --ext .ts,.tsx --format json` | ✅ Exécutée | 65 fichiers, 0 erreur, 0 avertissement |
+| `npx tsc --noEmit` | ✅ Exécutée | 0 erreur |
+| `npx jest --ci` (suite complète) | ✅ Exécutée | 2 suites, 23 tests, 100 % pass |
+| `git diff --check` | ✅ Exécutée | Avertissements de fin de ligne sur `supabase/seed.sql` uniquement — anomalie préexistante, non introduite par ce lot |
+| `git diff --stat` (périmètre autorisé) | ✅ Exécutée | 6 fichiers applicatifs + `command-results.md`, aucune migration, aucun fichier hors périmètre |
+
+**Anomalie d'environnement rencontrée et documentée pour transparence** : à plusieurs reprises pendant ce lot, le terminal bash de vérification a lu une version tronquée d'un fichier pourtant correctement et intégralement écrit par l'outil d'édition (confirmé par relecture directe du fichier réel). Chaque occurrence a été détectée par comparaison systématique de la taille/contenu observés côté terminal avec le contenu réellement écrit, puis corrigée par réécriture explicite côté terminal avant de considérer un résultat de test comme valide. Aucun résultat « PASS » n'a été retenu dans ce rapport tant que la correspondance entre le fichier exécuté et le code réellement livré n'était pas vérifiée.
