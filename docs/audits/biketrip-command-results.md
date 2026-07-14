@@ -321,3 +321,38 @@ Conséquence directe sur ce lot : le lint, le typecheck et Jest n'ont pas pu êt
 ### 13.4 Périmètre
 
 Fichiers modifiés : `.github/workflows/ci.yml`, `.nvmrc`, `docs/audits/biketrip-command-results.md`, nouveau rapport de lot. Aucun fichier `app/`, `src/`, `supabase/` touché. `supabase/seed.sql` reste hors commit (dérive CRLF préexistante, non liée à ce lot).
+
+---
+
+## 14. Lot BIKETRIP-P1-CI-002 — Validation reproductible de la CI locale (2026-07-14)
+
+### 14.1 Diagnostic de l'incident du lot précédent
+
+Root cause identifiée : le dossier de travail principal (`.../BikeTrip`) est un montage depuis le système de fichiers Windows de l'utilisateur. `npm ci` y écrit/renomme des dizaines de milliers de petits fichiers en quelques secondes ; ce volume d'opérations a provoqué des erreurs `ENOTEMPTY` persistantes lors des renommages atomiques internes de npm, indépendamment du budget de temps par commande. Ce n'était ni un problème de code, ni de lockfile, ni du workflow CI lui-même.
+
+### 14.2 Méthode de validation retenue
+
+Clonage Git local (depuis le chemin du dépôt principal, sans réseau) vers `/tmp/biketrip-ci-validation`, un répertoire natif du système de fichiers Linux de cet agent, hors de tout montage Windows :
+```bash
+git clone --no-hardlinks /sessions/.../BikeTrip /tmp/biketrip-ci-validation
+cd /tmp/biketrip-ci-validation
+git checkout 163e5c753225326abfce17298dfa9aabf12a50a5
+```
+SHA confirmé identique avant/après clonage. `node_modules` absent avant toute installation.
+
+### 14.3 Résultats
+
+| Commande | Statut | Durée | Détail |
+|---|---|---|---|
+| `npm ci` (isolé) | ✅ code 0 | 17,9 s | 1487 paquets ajoutés, aucune erreur, uniquement avertissements `deprecated` |
+| `git diff -- package.json package-lock.json` après `npm ci` | ✅ vide | — | lockfile non modifié |
+| `npm run lint` | ✅ code 0 | 4,6 s | 0 erreur |
+| `npm run type-check` | ✅ code 0 | 4,4 s | 0 erreur |
+| `npm test -- --ci` | ✅ code 0 | ~1,1 s | 30/30 tests passés |
+| Séquence complète `npm ci && lint && type-check && test` (un seul shell) | ✅ code 0 | 23,6 s | Confirme le comportement exact du job CI `quality` |
+| `sha256sum .github/workflows/ci.yml` vs `git show HEAD:.github/workflows/ci.yml \| sha256sum` | ✅ identiques | — | `94d8096a27db7e87da5544865655c006b8d10a4d18eaa5844ca2c88ab5259cff` |
+| `git status --short` / `git diff --check` / `git diff --stat` (état final) | ✅ tous vides/propres | — | Aucun fichier suivi modifié |
+
+### 14.4 Conclusion
+
+L'ensemble du job CI `quality` a été reproduit avec succès sur un environnement Node 22 propre. Statut retenu : `PASS SOUS RÉSERVE EXÉCUTION GITHUB` (réserve restante : exécution réelle sur runner GitHub Actions, non déclenchable sans push autorisé). Aucune modification n'a été nécessaire au workflow, à `.nvmrc`, à `package.json` ni à `package-lock.json`. `node_modules` du dossier de travail principal reste dans son état incomplet issu du lot précédent (hors périmètre de correction de ce lot) ; recommandation inchangée d'une restauration par l'utilisateur sur son propre poste.
