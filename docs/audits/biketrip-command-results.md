@@ -356,3 +356,9 @@ SHA confirmé identique avant/après clonage. `node_modules` absent avant toute 
 ### 14.4 Conclusion
 
 L'ensemble du job CI `quality` a été reproduit avec succès sur un environnement Node 22 propre. Statut retenu : `PASS SOUS RÉSERVE EXÉCUTION GITHUB` (réserve restante : exécution réelle sur runner GitHub Actions, non déclenchable sans push autorisé). Aucune modification n'a été nécessaire au workflow, à `.nvmrc`, à `package.json` ni à `package-lock.json`. `node_modules` du dossier de travail principal reste dans son état incomplet issu du lot précédent (hors périmètre de correction de ce lot) ; recommandation inchangée d'une restauration par l'utilisateur sur son propre poste.
+
+---
+
+## 15. Lot BIKETRIP-P1-GIT-001 — Audit pré-push (2026-07-14)
+
+Audit complet de l'historique local (6 commits, `dbf46f7..HEAD`) : aucun secret détecté (`git grep` sur motifs de clés/API/mots de passe), aucun fichier inattendu, aucune troncature (`git show --check` propre sur les 6 commits), `supabase/seed.sql` confirmé absent de tout commit et sa dérive de travail confirmée purement CRLF/LF (`git diff --ignore-space-at-eol` vide). Aucun remote configuré, aucun repository cible identifiable sans information externe — non inventé. Revalidation qualité complète (`npm ci && lint && type-check && test`) rejouée sur le SHA exact à publier (`7680d87`) dans un nouveau clone Linux natif : code de sortie 0, 24,6 s, 30/30 tests. Stratégie de publication recommandée : branche `chore/biketrip-foundation-hardening` → push → pull request → CI → revue → merge. Aucune commande Git de publication exécutée (remote, branche, push tous préparés mais non lancés). 5 fichiers non suivis classés sans être ajoutés à Git (2 nécessitant une décision produit explicite, 3 documents d'audit à mettre à jour avant publication car partiellement obsolètes). Voir rapport de lot dédié pour le détail intégral.
