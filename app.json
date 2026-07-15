@@ -1,0 +1,85 @@
+{
+  "expo": {
+    "name": "BikeTrip",
+    "slug": "bike-trip",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
+    "scheme": "biketrip",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/images/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#16A34A"
+    },
+    "assetBundlePatterns": ["**/*"],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.biketrip.app",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "BikeTrip utilise ta position pour afficher les pistes proches et suivre ton trajet.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "BikeTrip utilise ta position pour suivre ton trajet en temps réel.",
+        "NSCameraUsageDescription": "BikeTrip utilise l'appareil photo pour ajouter des photos à tes signalements.",
+        "NSPhotoLibraryUsageDescription": "BikeTrip accède à tes photos pour illustrer tes sorties et signalements.",
+        "NSMicrophoneUsageDescription": "Accès au micro requis pour certaines fonctionnalités de l'appareil photo."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/adaptive-icon.png",
+        "backgroundColor": "#16A34A"
+      },
+      "package": "com.biketrip.app",
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_BACKGROUND_LOCATION",
+        "CAMERA",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE",
+        "RECEIVE_BOOT_COMPLETED",
+        "VIBRATE"
+      ]
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "static",
+      "favicon": "./assets/images/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "BikeTrip utilise ta position pour suivre ton trajet.",
+          "locationAlwaysPermission": "BikeTrip utilise ta position en arrière-plan pendant tes sorties.",
+          "locationWhenInUsePermission": "BikeTrip utilise ta position pour afficher les pistes proches."
+        }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "BikeTrip utilise l'appareil photo pour tes signalements."
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/notification-icon.png",
+          "color": "#16A34A"
+        }
+      ],
+      "expo-asset"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "extra": {
+      "eas": {
+        "projectId": "your-eas-project-id"
+      }
+    }
+  }
+}
