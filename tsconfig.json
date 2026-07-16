@@ -10,9 +10,15 @@
     "exactOptionalPropertyTypes": false,
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"],
-      "@app/*": ["./app/*"],
-      "@assets/*": ["./assets/*"]
+      "@/*": [
+        "./src/*"
+      ],
+      "@app/*": [
+        "./app/*"
+      ],
+      "@assets/*": [
+        "./assets/*"
+      ]
     },
     "jsxImportSource": "nativewind"
   },
@@ -20,7 +26,8 @@
     "**/*.ts",
     "**/*.tsx",
     "expo-env.d.ts",
-    "nativewind-env.d.ts"
+    "nativewind-env.d.ts",
+    ".expo/types/**/*.ts"
   ],
   "exclude": [
     "node_modules"
