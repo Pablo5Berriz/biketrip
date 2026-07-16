@@ -1,5 +1,5 @@
 import { supabase } from '@/lib/supabase/client';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import * as ImageManipulator from 'expo-image-manipulator';
 import type { ServiceResult } from '@/types/database';
 

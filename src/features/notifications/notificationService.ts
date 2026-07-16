@@ -99,5 +99,5 @@ export function addNotificationResponseListener(
 export function removeNotificationListener(
   subscription: Notifications.Subscription,
 ): void {
-  Notifications.removeNotificationSubscription(subscription);
+  subscription.remove();
 }

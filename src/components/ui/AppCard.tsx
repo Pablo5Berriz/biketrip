@@ -5,7 +5,7 @@ import { View, TouchableOpacity, type ViewProps } from 'react-native';
 // AppCard — Carte BikeTrip
 // ============================================================
 
-interface AppCardProps extends ViewProps {
+interface AppCardProps extends Omit<ViewProps, 'onBlur' | 'onFocus'> {
   children: React.ReactNode;
   onPress?: () => void;
   elevated?: boolean;
