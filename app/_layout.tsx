@@ -28,6 +28,7 @@ function AppContent() {
       <Stack.Screen name="auth/register" />
       <Stack.Screen name="auth/forgot-password" />
       <Stack.Screen name="auth/confirm" />
+      <Stack.Screen name="auth/reset-password" />
       <Stack.Screen name="tabs" />
       <Stack.Screen name="trails/[id]" options={{ presentation: 'card' }} />
       <Stack.Screen name="ride/start" options={{ presentation: 'modal' }} />

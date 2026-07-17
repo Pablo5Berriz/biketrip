@@ -113,8 +113,46 @@ export async function getSession(): Promise<ServiceResult<Session>> {
 export async function resetPassword(email: string): Promise<ServiceResult> {
   try {
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: 'biketrip://reset-password',
+      // Deep link mobile vers app/auth/reset-password.tsx (scheme "biketrip"
+      // déclaré dans app.json), même mécanisme que emailRedirectTo pour signUp
+      // (voir app/auth/confirm.tsx) : le lien renvoie ici avec un paramètre
+      // `code` (flow PKCE, voir src/lib/supabase/client.ts) à échanger via
+      // exchangeCodeForSession(). Doit être ajouté aux Redirect URLs
+      // autorisées dans Supabase (Authentication -> URL Configuration).
+      redirectTo: 'biketrip://auth/reset-password',
     });
+    if (error) return { success: false, error: mapAuthError(error.message) };
+    return { success: true };
+  } catch {
+    return { success: false, error: 'Erreur réseau.' };
+  }
+}
+
+/**
+ * Échange du code de récupération de mot de passe contre une session
+ * temporaire (flow PKCE, voir app/auth/reset-password.tsx). Le code provient
+ * du deep link `biketrip://auth/reset-password?code=...` envoyé par
+ * resetPassword() ci-dessus. Même mécanisme que la confirmation d'inscription
+ * (app/auth/confirm.tsx), extrait ici en fonction de service dédiée pour
+ * rester testable sans dépendre d'un composant React.
+ */
+export async function exchangeRecoveryCode(code: string): Promise<ServiceResult> {
+  try {
+    const { error } = await supabase.auth.exchangeCodeForSession(code);
+    if (error) return { success: false, error: mapAuthError(error.message) };
+    return { success: true };
+  } catch {
+    return { success: false, error: 'Erreur réseau.' };
+  }
+}
+
+/**
+ * Mise à jour du mot de passe (session de récupération active,
+ * voir app/auth/reset-password.tsx)
+ */
+export async function updatePassword(newPassword: string): Promise<ServiceResult> {
+  try {
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
     if (error) return { success: false, error: mapAuthError(error.message) };
     return { success: true };
   } catch {
@@ -134,6 +172,8 @@ function mapAuthError(message: string): string {
     'Invalid email':                    'Adresse email invalide.',
     'Email rate limit exceeded':        'Trop de tentatives. Réessaie dans quelques minutes.',
     'User not found':                   'Aucun compte trouvé avec cet email.',
+    'New password should be different from the old password': 'Le nouveau mot de passe doit être différent de l\'ancien.',
+    'Auth session missing':              'Session expirée. Redemande un lien de réinitialisation.',
   };
 
   for (const [key, value] of Object.entries(errors)) {
