@@ -23,16 +23,18 @@ function AppContent() {
   return (
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="index" />
-      <Stack.Screen name="onboarding" />
-      <Stack.Screen name="auth" />
-      <Stack.Screen name="(tabs)" />
+      <Stack.Screen name="onboarding/index" />
+      <Stack.Screen name="auth/login" />
+      <Stack.Screen name="auth/register" />
+      <Stack.Screen name="auth/forgot-password" />
+      <Stack.Screen name="auth/confirm" />
+      <Stack.Screen name="tabs" />
       <Stack.Screen name="trails/[id]" options={{ presentation: 'card' }} />
       <Stack.Screen name="ride/start" options={{ presentation: 'modal' }} />
       <Stack.Screen name="ride/active" options={{ presentation: 'fullScreenModal' }} />
       <Stack.Screen name="ride/summary" options={{ presentation: 'modal' }} />
       <Stack.Screen name="reports/new" options={{ presentation: 'modal' }} />
-      <Stack.Screen name="settings" />
-      <Stack.Screen name="admin" />
+      <Stack.Screen name="settings/index" />
     </Stack>
   );
 }

@@ -113,7 +113,7 @@ export default function HomeScreen() {
           </TouchableOpacity>
 
           <TouchableOpacity
-            onPress={() => router.push('/(tabs)/map')}
+            onPress={() => router.push('/tabs/map')}
             className="flex-1 bg-secondary-600 rounded-2xl p-4 flex-row items-center gap-3"
             activeOpacity={0.85}
             accessibilityRole="button"
@@ -171,7 +171,7 @@ export default function HomeScreen() {
           <View className="px-5 flex-row items-center justify-between mb-3">
             <Text className="text-base font-bold text-carbon">Pistes proches</Text>
             <TouchableOpacity
-              onPress={() => router.push('/(tabs)/discover')}
+              onPress={() => router.push('/tabs/discover')}
               className="flex-row items-center gap-1"
               accessibilityRole="button"
               accessibilityLabel="Voir toutes les pistes proches"

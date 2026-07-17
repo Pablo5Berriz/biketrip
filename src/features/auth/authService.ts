@@ -9,7 +9,10 @@ import type { User, Session } from '@supabase/supabase-js';
 
 export interface AuthSession {
   user: User;
-  session: Session;
+  // null si Confirm Email est activé côté Supabase : le compte est créé mais
+  // aucune session n'est délivrée tant que l'utilisateur n'a pas confirmé son
+  // adresse via le lien reçu par email (voir app/auth/confirm.tsx).
+  session: Session | null;
 }
 
 /**
@@ -22,16 +25,26 @@ export async function signUp(data: SignUpFormData): Promise<ServiceResult<AuthSe
       password: data.password,
       options: {
         data: { full_name: data.fullName },
+        // Deep link mobile vers app/auth/confirm.tsx (scheme "biketrip" déclaré
+        // dans app.json). Doit être ajouté aux Redirect URLs autorisées dans
+        // Supabase (Authentication → URL Configuration).
+        emailRedirectTo: 'biketrip://auth/confirm',
       },
     });
 
     if (error) {
       return { success: false, error: mapAuthError(error.message) };
     }
-    if (!authData.user || !authData.session) {
+    if (!authData.user) {
       return { success: false, error: 'Erreur lors de l\'inscription. Réessaie.' };
     }
 
+    // authData.session peut être null ici : ce n'est PAS un échec.
+    // - Confirm Email désactivé (ou déjà confirmé) → session immédiate (cas A).
+    // - Confirm Email activé → compte créé, session null tant que l'email
+    //   n'est pas confirmé (cas B). L'UI (app/auth/register.tsx) affiche déjà
+    //   le message adapté sur success:true, quelle que soit la présence de
+    //   session.
     return {
       success: true,
       data: { user: authData.user, session: authData.session },

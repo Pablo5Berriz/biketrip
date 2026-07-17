@@ -88,7 +88,7 @@ export default function CollectionDetailScreen() {
           title="Collection vide"
           description="Ajoute des pistes à cette collection depuis leur page de détail."
           actionLabel="Explorer les pistes"
-          onAction={() => router.push('/(tabs)/discover')}
+          onAction={() => router.push('/tabs/discover')}
         />
       ) : (
         <FlatList

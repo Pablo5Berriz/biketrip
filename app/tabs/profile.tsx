@@ -93,7 +93,7 @@ export default function ProfileScreen() {
         <View className="px-5 pt-5 pb-6 items-center gap-4">
           {/* Avatar */}
           <TouchableOpacity
-            onPress={() => router.push('/settings/index')}
+            onPress={() => router.push('/settings')}
             className="relative"
             accessibilityRole="button"
             accessibilityLabel="Modifier mon profil"
@@ -167,19 +167,19 @@ export default function ProfileScreen() {
               icon={<Activity size={18} color={colors.primary.DEFAULT} />}
               label="Mes sorties"
               sublabel={`${totalRides} sortie${totalRides > 1 ? 's' : ''}`}
-              onPress={() => router.push('/(tabs)/rides')}
+              onPress={() => router.push('/tabs/rides')}
               iconBg={`${colors.primary.DEFAULT}18`}
             />
             <MenuRow
               icon={<Heart size={18} color={colors.accent.DEFAULT} />}
               label="Mes favoris"
-              onPress={() => router.push('/favorites/index')}
+              onPress={() => router.push('/favorites')}
               iconBg={`${colors.accent.DEFAULT}18`}
             />
             <MenuRow
               icon={<Star size={18} color={colors.warning} />}
               label="Mes collections"
-              onPress={() => router.push('/collections/index')}
+              onPress={() => router.push('/collections')}
               iconBg={`${colors.warning}18`}
               isLast
             />
@@ -191,7 +191,7 @@ export default function ProfileScreen() {
               icon={<Settings size={18} color={colors.textSecondary} />}
               label="Paramètres"
               sublabel="Profil, vélo, notifications..."
-              onPress={() => router.push('/settings/index')}
+              onPress={() => router.push('/settings')}
               iconBg={`${colors.placeholder}18`}
               isLast
             />

@@ -37,7 +37,7 @@ export default function LoginScreen() {
       setServerError(result.error ?? 'Erreur lors de la connexion.');
       return;
     }
-    router.replace('/(tabs)/home');
+    router.replace('/tabs/home');
   }
 
   return (

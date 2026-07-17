@@ -24,5 +24,11 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: false,
+    // PKCE requis pour la confirmation email mobile : le flow implicite (défaut)
+    // renvoie les tokens dans le fragment d'URL (#access_token=...), qui n'est
+    // pas exploitable par un routeur mobile basé sur les query params
+    // (expo-router). PKCE renvoie un `?code=` exploitable via
+    // exchangeCodeForSession() dans app/auth/confirm.tsx.
+    flowType: 'pkce',
   },
 });

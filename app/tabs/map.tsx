@@ -137,7 +137,7 @@ export default function MapScreen() {
         {/* Barre de recherche */}
         <View className="mx-4 mt-4">
           <TouchableOpacity
-            onPress={() => router.push('/(tabs)/discover')}
+            onPress={() => router.push('/tabs/discover')}
             className="bg-white rounded-2xl px-4 py-3.5 flex-row items-center gap-3 shadow-float"
             accessibilityRole="button"
             accessibilityLabel="Rechercher une piste"

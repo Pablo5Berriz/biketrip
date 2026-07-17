@@ -67,7 +67,7 @@ export default function FavoritesScreen() {
           title="Aucun favori"
           description="Ajoute des pistes à tes favoris pour les retrouver facilement ici."
           actionLabel="Explorer les pistes"
-          onAction={() => router.push('/(tabs)/discover')}
+          onAction={() => router.push('/tabs/discover')}
         />
       ) : (
         <FlatList

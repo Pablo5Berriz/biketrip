@@ -71,7 +71,7 @@ export default function RideSummaryScreen() {
         <View className="flex-1 items-center justify-center px-8 gap-4">
           <Text className="text-xl font-bold text-carbon">Sortie terminée !</Text>
           <TouchableOpacity
-            onPress={() => router.replace('/(tabs)/home')}
+            onPress={() => router.replace('/tabs/home')}
             className="bg-primary-600 rounded-2xl py-4 px-8"
             accessibilityRole="button"
             accessibilityLabel="Retourner à l'accueil"
@@ -198,7 +198,7 @@ export default function RideSummaryScreen() {
               </TouchableOpacity>
 
               <TouchableOpacity
-                onPress={() => router.replace('/(tabs)/home')}
+                onPress={() => router.replace('/tabs/home')}
                 className="bg-primary-600 rounded-2xl py-4 flex-row items-center justify-center gap-2"
                 accessibilityRole="button"
                 accessibilityLabel="Retourner à l'accueil"

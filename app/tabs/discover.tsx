@@ -151,7 +151,7 @@ export default function DiscoverScreen() {
           title="Aucune piste trouvée"
           description="Essaie d'autres critères ou explore la carte."
           actionLabel="Voir la carte"
-          onAction={() => router.push('/(tabs)/map')}
+          onAction={() => router.push('/tabs/map')}
         />
       ) : (
         <FlatList
