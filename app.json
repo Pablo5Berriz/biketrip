@@ -13,7 +13,9 @@
       "resizeMode": "contain",
       "backgroundColor": "#16A34A"
     },
-    "assetBundlePatterns": ["**/*"],
+    "assetBundlePatterns": [
+      "**/*"
+    ],
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.biketrip.app",
@@ -77,9 +79,11 @@
       "typedRoutes": true
     },
     "extra": {
+      "router": {},
       "eas": {
-        "projectId": "your-eas-project-id"
+        "projectId": "4eead0fd-60c6-4f27-bbb2-077dc309ad75"
       }
-    }
+    },
+    "owner": "paulnombril"
   }
 }
