@@ -27,7 +27,13 @@ export default function ProfileScreen() {
   const user = useUser();
 
   const statsQuery = useQuery({
-    queryKey: ['rides', 'stats'],
+    // BIKETRIP-P1-USER-DATA-ISOLATION-003 : queryKey scopée par user.id.
+    // Sans cela, la clé ['rides','stats'] est partagée entre tous les
+    // comptes sur la durée de vie du QueryClient (aucun clear() au
+    // logout) : après déconnexion/reconnexion avec un autre compte, le
+    // cache renvoie instantanément (staleTime 10 min) les statistiques
+    // de l'ancien utilisateur sans jamais rappeler getRideStats().
+    queryKey: ['rides', 'stats', user?.id],
     queryFn: () => getRideStats(user!.id),
     enabled: isAuthenticated && !!user?.id,
     staleTime: 1000 * 60 * 10,

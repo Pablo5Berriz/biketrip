@@ -49,14 +49,16 @@ export default function RidesScreen() {
   const user = useUser();
 
   const ridesQuery = useQuery({
-    queryKey: ['rides', 'history'],
+    // BIKETRIP-P1-USER-DATA-ISOLATION-003 : queryKey scopée par user.id
+    // (même défaut que profile.tsx — voir commentaire là-bas pour la preuve).
+    queryKey: ['rides', 'history', user?.id],
     queryFn: () => getRideHistory(user!.id),
     enabled: isAuthenticated && !!user?.id,
     staleTime: 1000 * 60 * 5,
   });
 
   const statsQuery = useQuery({
-    queryKey: ['rides', 'stats'],
+    queryKey: ['rides', 'stats', user?.id],
     queryFn: () => getRideStats(user!.id),
     enabled: isAuthenticated && !!user?.id && activeTab === 'Statistiques',
     staleTime: 1000 * 60 * 10,
